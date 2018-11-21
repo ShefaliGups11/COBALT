@@ -133,15 +133,12 @@ TypeId CobaltQueueDisc::GetTypeId (void)
     .SetParent<QueueDisc> ()
     .SetGroupName ("TrafficControl")
     .AddConstructor<CobaltQueueDisc> ()
-   
-
     .AddAttribute ("MaxSize",
                    "The maximum number of packets/bytes accepted by this queue disc.",
                    QueueSizeValue (QueueSize (QueueSizeUnit::BYTES, 1500 * DEFAULT_COBALT_LIMIT)),
                    MakeQueueSizeAccessor (&QueueDisc::SetMaxSize,
                                           &QueueDisc::GetMaxSize),
                    MakeQueueSizeChecker ())
-  
     .AddAttribute ("MinBytes",
                    "The Cobalt algorithm minbytes parameter.",
                    UintegerValue (1500),
@@ -211,14 +208,14 @@ static inline uint32_t ReciprocalDivide (uint32_t A, uint32_t R)
   return (uint32_t)(((uint64_t)A * R) >> 32);
 }
 
-double min(double x, double y)
+double min (double x, double y)
 {
-       return (x < y) ? x : y;
+  return (x < y) ? x : y;
 }
 
-double max(double x, double y)
+double max (double x, double y)
 {
-       return (x > y) ? x : y;
+  return (x > y) ? x : y;
 }
 
 /**
@@ -233,7 +230,6 @@ static uint32_t CoDelGetTime (void)
   return ns >> COBALT_SHIFT;
 }
 
-
 CobaltQueueDisc::CobaltQueueDisc ()
   : QueueDisc ()
 {
@@ -242,7 +238,7 @@ CobaltQueueDisc::CobaltQueueDisc ()
   m_uv = CreateObject<UniformRandomVariable> ();
 }
 
-double CobaltQueueDisc::GetPdrop()
+double CobaltQueueDisc::GetPdrop ()
 {
   return m_Pdrop;
 }
@@ -263,23 +259,22 @@ CobaltQueueDisc::AssignStreams (int64_t stream)
 void
 CobaltQueueDisc::InitializeParams (void)
 {
-    // Cobalt parameters
-    NS_LOG_FUNCTION (this);
-    m_count = 0;
-    m_dropping = false;
-    m_recInvSqrt = ~0U >> REC_INV_SQRT_SHIFT;
-    m_lastUpdateTimeBlue = 0;
-    m_firstAboveTime = 0;
-    m_dropNext = 0;
-    m_sojourn = 0;
+  // Cobalt parameters
+  NS_LOG_FUNCTION (this);
+  m_count = 0;
+  m_dropping = false;
+  m_recInvSqrt = ~0U >> REC_INV_SQRT_SHIFT;
+  m_lastUpdateTimeBlue = 0;
+  m_firstAboveTime = 0;
+  m_dropNext = 0;
+  m_sojourn = 0;
 
-    // Stats
-    m_stats.forcedDrop = 0;
-    m_stats.unforcedDrop = 0;
-    m_stats.qLimDrop = 0;
-    m_stats.forcedMark = 0;
+  // Stats
+  m_stats.forcedDrop = 0;
+  m_stats.unforcedDrop = 0;
+  m_stats.qLimDrop = 0;
+  m_stats.forcedMark = 0;
 }
-
 
 CobaltQueueDisc::Stats
 CobaltQueueDisc::GetStats ()
@@ -368,8 +363,6 @@ CobaltQueueDisc::ControlLaw (uint32_t t)
   return t + ReciprocalDivide (Time2CoDel (m_interval), m_recInvSqrt << REC_INV_SQRT_SHIFT);
 }
 
-
-
 Time
 CobaltQueueDisc::GetQueueDelay (void)
 {
@@ -422,34 +415,30 @@ CobaltQueueDisc::CheckConfig (void)
   if (GetNInternalQueues () == 0)
     {
 
-           AddInternalQueue (CreateObjectWithAttributes<DropTailQueue<QueueDiscItem> >
+      AddInternalQueue (CreateObjectWithAttributes<DropTailQueue<QueueDiscItem> >
                           ("MaxSize", QueueSizeValue (GetMaxSize ())));
     }
-      
+
 
   if (GetNInternalQueues () != 1)
     {
       NS_LOG_ERROR ("CobaltQueueDisc needs 1 internal queue");
       return false;
     }
-    return true;
-  }
+  return true;
+}
 
-  
 bool
 CobaltQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
 {
   NS_LOG_FUNCTION (this << item);
   Ptr<Packet> p = item->GetPacket ();
-
-  
-
-    if (GetCurrentSize () + item > GetMaxSize ())
+  if (GetCurrentSize () + item > GetMaxSize ())
     {
       NS_LOG_LOGIC ("Queue full -- dropping pkt");
       uint32_t now = CoDelGetTime ();
       // Call this to update Blue's drop probability
-      CobaltQueueFull(now);
+      CobaltQueueFull (now);
       DropBeforeEnqueue (item, OVERLIMIT_DROP);
       m_stats.qLimDrop++;
       return false;
@@ -475,161 +464,181 @@ CobaltQueueDisc::DoDequeue (void)
 {
   NS_LOG_FUNCTION (this);
 
-  while(1)
+  while (1)
     {
-       Ptr<QueueDiscItem> item = GetInternalQueue (0)->Dequeue ();
-       if (!item)
+      Ptr<QueueDiscItem> item = GetInternalQueue (0)->Dequeue ();
+      if (!item)
         {
           // Leave dropping state when queue is empty (derived from Codel)
           m_dropping = false;
           NS_LOG_LOGIC ("Queue empty");
           uint32_t now = CoDelGetTime ();
           // Call this to update Blue's drop probability
-          CobaltQueueEmpty(now);
+          CobaltQueueEmpty (now);
           return 0;
         }
 
-       uint32_t now = CoDelGetTime ();
+      uint32_t now = CoDelGetTime ();
 
-       NS_LOG_LOGIC ("Popped " << item);
-       NS_LOG_LOGIC ("Number packets remaining " << GetInternalQueue (0)->GetNPackets ());
-       NS_LOG_LOGIC ("Number bytes remaining " << GetInternalQueue (0)->GetNBytes ());
+      NS_LOG_LOGIC ("Popped " << item);
+      NS_LOG_LOGIC ("Number packets remaining " << GetInternalQueue (0)->GetNPackets ());
+      NS_LOG_LOGIC ("Number bytes remaining " << GetInternalQueue (0)->GetNBytes ());
 
-       // Determine if item should be dropped
-       // ECN marking happens inside this function, so it need not be done here
-       bool drop = CobaltShouldDrop(item, now);
+      // Determine if item should be dropped
+      // ECN marking happens inside this function, so it need not be done here
+      bool drop = CobaltShouldDrop (item, now);
 
-       if(drop)
-           DropAfterDequeue (item, TARGET_EXCEEDED_DROP);
-       else
-            return item;
+      if (drop)
+        {
+          DropAfterDequeue (item, TARGET_EXCEEDED_DROP);
+        }
+      else
+        {
+          return item;
+        }
     }
 }
 
 /* Call this when a packet had to be dropped due to queue overflow.
  * Returns true if the BLUE state was quiescent before but active after this call.
  */
-void CobaltQueueDisc::CobaltQueueFull(uint32_t now)
+void CobaltQueueDisc::CobaltQueueFull (uint32_t now)
 {
   NS_LOG_LOGIC ("Outside IF block");
-  if(CoDelTimeAfter((now - m_lastUpdateTimeBlue), Time2CoDel(m_target)))
-  {
-    NS_LOG_LOGIC ("inside IF block");
-    m_Pdrop = min(m_Pdrop + m_increment, (double)1.0);
-		m_lastUpdateTimeBlue = now;
-  }
+  if (CoDelTimeAfter ((now - m_lastUpdateTimeBlue), Time2CoDel (m_target)))
+    {
+      NS_LOG_LOGIC ("inside IF block");
+      m_Pdrop = min (m_Pdrop + m_increment, (double)1.0);
+      m_lastUpdateTimeBlue = now;
+    }
   m_dropping = true;
   m_dropNext = now;
-  if(!m_count)
-        m_count = 1;
+  if (!m_count)
+    {
+      m_count = 1;
+    }
 }
 
 /* Call this when the queue was serviced but turned out to be empty.
  * Returns true if the BLUE state was active before but quiescent after this call.
  */
-void CobaltQueueDisc::CobaltQueueEmpty(uint32_t now)
+void CobaltQueueDisc::CobaltQueueEmpty (uint32_t now)
 {
-	if(m_Pdrop && CoDelTimeAfter((now - m_lastUpdateTimeBlue), Time2CoDel(m_target)))
-        {
-                m_Pdrop = max(m_Pdrop - m_decrement, (double)0.0);
-		m_lastUpdateTimeBlue = now;
-	}
-	m_dropping = true;
+  if (m_Pdrop && CoDelTimeAfter ((now - m_lastUpdateTimeBlue), Time2CoDel (m_target)))
+    {
+      m_Pdrop = max (m_Pdrop - m_decrement, (double)0.0);
+      m_lastUpdateTimeBlue = now;
+    }
+  m_dropping = true;
 
-	if(m_count && CoDelTimeAfterEq ((now - m_dropNext), 0))
-        {
-		m_count--;
-                NewtonStep ();
-		m_dropNext = ControlLaw (m_dropNext);
-	}
+  if (m_count && CoDelTimeAfterEq ((now - m_dropNext), 0))
+    {
+      m_count--;
+      NewtonStep ();
+      m_dropNext = ControlLaw (m_dropNext);
+    }
 }
 
 // Determines if Cobalt should drop the packet
-bool CobaltQueueDisc::CobaltShouldDrop(Ptr<QueueDiscItem> item, uint32_t now)
+bool CobaltQueueDisc::CobaltShouldDrop (Ptr<QueueDiscItem> item, uint32_t now)
 {
-        bool drop = false, codelForcedDrop = false;
-	/* Simple BLUE implementation. Lack of ECN is deliberate. */
-	if(m_Pdrop)
-	{
-	        double u = m_uv->GetValue ();
-		drop = (u < m_Pdrop);
-	}
+  bool drop = false, codelForcedDrop = false;
+  /* Simple BLUE implementation. Lack of ECN is deliberate. */
+  if (m_Pdrop)
+    {
+      double u = m_uv->GetValue ();
+      drop = (u < m_Pdrop);
+    }
 
-	/* Simplified Codel implementation */
-        CobaltTimestampTag tag;
-        bool found = item->GetPacket ()->RemovePacketTag (tag);
-        NS_ASSERT_MSG (found, "found a packet without an input timestamp tag");
-        NS_UNUSED (found);    //silence compiler warning
-	Time delta = Simulator::Now () - tag.GetTxTime ();
-        NS_LOG_INFO ("Sojourn time " << delta.GetSeconds ());
-        m_sojourn = delta;
-        uint32_t sojournTime = Time2CoDel (delta);
-        uint32_t schedule = now - m_dropNext;
-	bool over_target = CoDelTimeAfter (sojournTime, Time2CoDel (m_target));
-	bool next_due = m_count && schedule >= 0;
+  /* Simplified Codel implementation */
+  CobaltTimestampTag tag;
+  bool found = item->GetPacket ()->RemovePacketTag (tag);
+  NS_ASSERT_MSG (found, "found a packet without an input timestamp tag");
+  NS_UNUSED (found);          //silence compiler warning
+  Time delta = Simulator::Now () - tag.GetTxTime ();
+  NS_LOG_INFO ("Sojourn time " << delta.GetSeconds ());
+  m_sojourn = delta;
+  uint32_t sojournTime = Time2CoDel (delta);
+  uint32_t schedule = now - m_dropNext;
+  bool over_target = CoDelTimeAfter (sojournTime, Time2CoDel (m_target));
+  bool next_due = m_count && schedule >= 0;
 
-	if(over_target)
-	{
-		if(!m_dropping)
-		{
-			m_dropping = true;
-			m_dropNext = ControlLaw (now);
-		}
-		if(!m_count)
-			m_count = 1;
-	}
-	else if(m_dropping)
-	{
-		m_dropping = false;
-	}
+  if (over_target)
+    {
+      if (!m_dropping)
+        {
+          m_dropping = true;
+          m_dropNext = ControlLaw (now);
+        }
+      if (!m_count)
+        {
+          m_count = 1;
+        }
+    }
+  else if (m_dropping)
+    {
+      m_dropping = false;
+    }
 
-	if(next_due && m_dropping)
-	{
-		/* Check for marking possibility only if BLUE decides NOT to drop. */
-		/* Check if router and packet, both have ECN enabled. Only if this is true, mark the packet. */
-		if(!drop)
-		{
-		        drop = !(m_useEcn && item->Mark());
-                if(!drop)
-		            m_stats.forcedMark++;
-		        else
-		            codelForcedDrop = true;
-		}
+  if (next_due && m_dropping)
+    {
+      /* Check for marking possibility only if BLUE decides NOT to drop. */
+      /* Check if router and packet, both have ECN enabled. Only if this is true, mark the packet. */
+      if (!drop)
+        {
+          drop = !(m_useEcn && item->Mark ());
+          if (!drop)
+            {
+              m_stats.forcedMark++;
+            }
+          else
+            {
+              codelForcedDrop = true;
+            }
+        }
 
-	        m_count = max(m_count, m_count + 1);
+      m_count = max (m_count, m_count + 1);
 
-		NewtonStep();
-		m_dropNext = ControlLaw (m_dropNext);
-		schedule = now - m_dropNext;
-	}
-	else
-	{
-		while(next_due)
-		{
-			m_count--;
-			NewtonStep();
-			m_dropNext = ControlLaw (m_dropNext);
-			schedule = now - m_dropNext;
-			next_due = m_count && schedule >= 0;
-		}
-	}
+      NewtonStep ();
+      m_dropNext = ControlLaw (m_dropNext);
+      schedule = now - m_dropNext;
+    }
+  else
+    {
+      while (next_due)
+        {
+          m_count--;
+          NewtonStep ();
+          m_dropNext = ControlLaw (m_dropNext);
+          schedule = now - m_dropNext;
+          next_due = m_count && schedule >= 0;
+        }
+    }
 
-	/* Overload the drop_next field as an activity timeout */
-	if(!m_count)
-		m_dropNext = now + Time2CoDel (m_interval);
-	else if(schedule > 0 && !drop)
-		m_dropNext = now;
+  /* Overload the drop_next field as an activity timeout */
+  if (!m_count)
+    {
+      m_dropNext = now + Time2CoDel (m_interval);
+    }
+  else if (schedule > 0 && !drop)
+    {
+      m_dropNext = now;
+    }
 
-        // Updating stats
-	if(drop)
-	{
-	        if(codelForcedDrop || m_Pdrop == 1.0)
-	                m_stats.forcedDrop++;
-	        else
-	                m_stats.unforcedDrop++;
-	}
+  // Updating stats
+  if (drop)
+    {
+      if (codelForcedDrop || m_Pdrop == 1.0)
+        {
+          m_stats.forcedDrop++;
+        }
+      else
+        {
+          m_stats.unforcedDrop++;
+        }
+    }
 
-	return drop;
+  return drop;
 }
 
 } // namespace ns3

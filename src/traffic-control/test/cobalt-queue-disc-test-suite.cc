@@ -15,7 +15,6 @@ using namespace ns3;
 /* needed shift to get a Q0.32 number from rec_inv_sqrt */
 #define REC_INV_SQRT_SHIFT_ns3 (32 - REC_INV_SQRT_BITS_ns3)
 
-
 static uint16_t _codel_Newton_step (uint32_t count, uint16_t rec_inv_sqrt)
 {
   uint32_t invsqrt = ((uint32_t)rec_inv_sqrt) << REC_INV_SQRT_SHIFT_ns3;
@@ -32,7 +31,6 @@ static uint32_t _reciprocal_scale (uint32_t val, uint32_t ep_ro)
   return (uint32_t)(((uint64_t)val * ep_ro) >> 32);
 }
 
-
 // End Linux borrow
 
 /**
@@ -41,7 +39,8 @@ static uint32_t _reciprocal_scale (uint32_t val, uint32_t ep_ro)
  *
  * \brief Cobalt Queue Disc Test Item
  */
-class CobaltQueueDiscTestItem : public QueueDiscItem {
+class CobaltQueueDiscTestItem : public QueueDiscItem
+{
 public:
   /**
    * Constructor
@@ -50,11 +49,11 @@ public:
    * \param addr address
    * \param protocol
    */
-  
+
   CobaltQueueDiscTestItem (Ptr<Packet> p, const Address & addr,uint16_t protocol, bool ecnCapable);
   virtual ~CobaltQueueDiscTestItem ();
   virtual void AddHeader (void);
-  virtual bool Mark(void);
+  virtual bool Mark (void);
 
 private:
   CobaltQueueDiscTestItem ();
@@ -71,8 +70,6 @@ private:
   CobaltQueueDiscTestItem &operator = (const CobaltQueueDiscTestItem &);
   bool m_ecnCapablePacket; ///< ECN capable packet?
 };
-
-
 
 CobaltQueueDiscTestItem::CobaltQueueDiscTestItem (Ptr<Packet> p, const Address & addr,uint16_t protocol, bool ecnCapable)
   : QueueDiscItem (p, addr, ecnCapable),
@@ -121,21 +118,18 @@ public:
    * \param queue the queue disc
    * \param size the size
    * \param error the error string
-   * 
+   *
    */
-  
-  private:
+
+private:
   QueueSizeUnit m_mode; ///< mode
 };
 
-
-
 CobaltQueueDiscBasicEnqueueDequeue::CobaltQueueDiscBasicEnqueueDequeue (QueueSizeUnit mode)
-  : TestCase ("Basic enqueue and dequeue operations, and attribute setting"+ mode)
+  : TestCase ("Basic enqueue and dequeue operations, and attribute setting" + mode)
 {
   m_mode = mode;
 }
-
 
 void
 CobaltQueueDiscBasicEnqueueDequeue::DoRun (void)
@@ -144,7 +138,7 @@ CobaltQueueDiscBasicEnqueueDequeue::DoRun (void)
 
   uint32_t pktSize = 1000;
   uint32_t modeSize = 0;
-  
+
   Address dest;
 
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MinBytes", UintegerValue (pktSize)), true,
@@ -174,62 +168,59 @@ CobaltQueueDiscBasicEnqueueDequeue::DoRun (void)
   p5 = Create<Packet> (pktSize);
   p6 = Create<Packet> (pktSize);
 
-  NS_TEST_EXPECT_MSG_EQ (queue->GetCurrentSize().GetValue (), 0 * modeSize, "There should be no packets in queue");
+  NS_TEST_EXPECT_MSG_EQ (queue->GetCurrentSize ().GetValue (), 0 * modeSize, "There should be no packets in queue");
   queue->Enqueue (Create<CobaltQueueDiscTestItem> (p1, dest,0, false));
-  NS_TEST_EXPECT_MSG_EQ (queue->GetCurrentSize().GetValue (), 1 * modeSize, "There should be one packet in queue");
+  NS_TEST_EXPECT_MSG_EQ (queue->GetCurrentSize ().GetValue (), 1 * modeSize, "There should be one packet in queue");
   queue->Enqueue (Create<CobaltQueueDiscTestItem> (p2, dest,0, false));
-  NS_TEST_EXPECT_MSG_EQ (queue->GetCurrentSize().GetValue (), 2 * modeSize, "There should be two packets in queue");
+  NS_TEST_EXPECT_MSG_EQ (queue->GetCurrentSize ().GetValue (), 2 * modeSize, "There should be two packets in queue");
   queue->Enqueue (Create<CobaltQueueDiscTestItem> (p3, dest,0, false));
-  NS_TEST_EXPECT_MSG_EQ (queue->GetCurrentSize().GetValue (), 3 * modeSize, "There should be three packets in queue");
+  NS_TEST_EXPECT_MSG_EQ (queue->GetCurrentSize ().GetValue (), 3 * modeSize, "There should be three packets in queue");
   queue->Enqueue (Create<CobaltQueueDiscTestItem> (p4, dest,0, false));
-  NS_TEST_EXPECT_MSG_EQ (queue->GetCurrentSize().GetValue (), 4 * modeSize, "There should be four packets in queue");
+  NS_TEST_EXPECT_MSG_EQ (queue->GetCurrentSize ().GetValue (), 4 * modeSize, "There should be four packets in queue");
   queue->Enqueue (Create<CobaltQueueDiscTestItem> (p5, dest,0, false));
-  NS_TEST_EXPECT_MSG_EQ (queue->GetCurrentSize().GetValue (), 5 * modeSize, "There should be five packets in queue");
+  NS_TEST_EXPECT_MSG_EQ (queue->GetCurrentSize ().GetValue (), 5 * modeSize, "There should be five packets in queue");
   queue->Enqueue (Create<CobaltQueueDiscTestItem> (p6, dest,0, false));
-  NS_TEST_EXPECT_MSG_EQ (queue->GetCurrentSize().GetValue (), 6 * modeSize, "There should be six packets in queue");
+  NS_TEST_EXPECT_MSG_EQ (queue->GetCurrentSize ().GetValue (), 6 * modeSize, "There should be six packets in queue");
 
-  
   NS_TEST_EXPECT_MSG_EQ (queue->GetDropOverLimit (), 0, "There should be no packets being dropped due to full queue");
 
   Ptr<QueueDiscItem> item;
 
   item = queue->Dequeue ();
   NS_TEST_EXPECT_MSG_EQ ((item != 0), true, "I want to remove the first packet");
-  NS_TEST_EXPECT_MSG_EQ (queue->GetCurrentSize().GetValue (), 5 * modeSize, "There should be five packets in queue");
+  NS_TEST_EXPECT_MSG_EQ (queue->GetCurrentSize ().GetValue (), 5 * modeSize, "There should be five packets in queue");
   NS_TEST_EXPECT_MSG_EQ (item->GetPacket ()->GetUid (), p1->GetUid (), "was this the first packet ?");
 
   item = queue->Dequeue ();
   NS_TEST_EXPECT_MSG_EQ ((item != 0), true, "I want to remove the second packet");
-  NS_TEST_EXPECT_MSG_EQ (queue->GetCurrentSize().GetValue (), 4 * modeSize, "There should be four packets in queue");
+  NS_TEST_EXPECT_MSG_EQ (queue->GetCurrentSize ().GetValue (), 4 * modeSize, "There should be four packets in queue");
   NS_TEST_EXPECT_MSG_EQ (item->GetPacket ()->GetUid (), p2->GetUid (), "Was this the second packet ?");
 
   item = queue->Dequeue ();
   NS_TEST_EXPECT_MSG_EQ ((item != 0), true, "I want to remove the third packet");
-  NS_TEST_EXPECT_MSG_EQ (queue->GetCurrentSize().GetValue (), 3 * modeSize, "There should be three packets in queue");
+  NS_TEST_EXPECT_MSG_EQ (queue->GetCurrentSize ().GetValue (), 3 * modeSize, "There should be three packets in queue");
   NS_TEST_EXPECT_MSG_EQ (item->GetPacket ()->GetUid (), p3->GetUid (), "Was this the third packet ?");
 
   item = queue->Dequeue ();
   NS_TEST_EXPECT_MSG_EQ ((item != 0), true, "I want to remove the forth packet");
-  NS_TEST_EXPECT_MSG_EQ (queue->GetCurrentSize().GetValue (), 2 * modeSize, "There should be two packets in queue");
+  NS_TEST_EXPECT_MSG_EQ (queue->GetCurrentSize ().GetValue (), 2 * modeSize, "There should be two packets in queue");
   NS_TEST_EXPECT_MSG_EQ (item->GetPacket ()->GetUid (), p4->GetUid (), "Was this the fourth packet ?");
 
   item = queue->Dequeue ();
   NS_TEST_EXPECT_MSG_EQ ((item != 0), true, "I want to remove the fifth packet");
-  NS_TEST_EXPECT_MSG_EQ (queue->GetCurrentSize().GetValue (), 1 * modeSize, "There should be one packet in queue");
+  NS_TEST_EXPECT_MSG_EQ (queue->GetCurrentSize ().GetValue (), 1 * modeSize, "There should be one packet in queue");
   NS_TEST_EXPECT_MSG_EQ (item->GetPacket ()->GetUid (), p5->GetUid (), "Was this the fifth packet ?");
 
   item = queue->Dequeue ();
   NS_TEST_EXPECT_MSG_EQ ((item != 0), true, "I want to remove the last packet");
-  NS_TEST_EXPECT_MSG_EQ (queue->GetCurrentSize().GetValue (), 0 * modeSize, "There should be zero packet in queue");
+  NS_TEST_EXPECT_MSG_EQ (queue->GetCurrentSize ().GetValue (), 0 * modeSize, "There should be zero packet in queue");
   NS_TEST_EXPECT_MSG_EQ (item->GetPacket ()->GetUid (), p6->GetUid (), "Was this the sixth packet ?");
 
   item = queue->Dequeue ();
   NS_TEST_EXPECT_MSG_EQ ((item == 0), true, "There are really no packets in queue");
 
- 
   NS_TEST_EXPECT_MSG_EQ (queue->GetDropCount (), 0, "There should be no packet drops according to Cobalt algorithm");
 }
-
 
 /**
  * \ingroup traffic-control-test
@@ -385,17 +376,20 @@ CobaltQueueDiscECNtest::RunECNtest (QueueSizeUnit mode)
       modeSize = 1;
     }
 
-
-  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MaxSize", QueueSizeValue (QueueSize (mode,modeSize*1500))),
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MaxSize", QueueSizeValue (QueueSize (mode,modeSize * 1500))),
                          true, "Verify that we can actually set the attribute MaxSize");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("UseEcn", BooleanValue (true)), true,
                          "Verify that we can actually set the attribute UseECN");
 
   queue->Initialize ();
   if (mode == QueueSizeUnit::BYTES)
+    {
       Enqueue (queue, pktSize, 100, false);
+    }
   else
+    {
       Enqueue (queue, 1, 100, false);
+    }
   DequeueWithDelay (queue, 0.005, 100);
   Simulator::Stop (Seconds (8.0));
   Simulator::Run ();
@@ -403,19 +397,22 @@ CobaltQueueDiscECNtest::RunECNtest (QueueSizeUnit mode)
   NS_TEST_EXPECT_MSG_NE (st.forcedDrop, 0, "There should be some forced drops");
   NS_TEST_EXPECT_MSG_EQ (st.forcedMark, 0, "There should no forced marks");
 
-
   // Test 5: Packets are ECN capable, but Cobalt queue disc is not ECN enabled
   queue = CreateObject<CobaltQueueDisc> ();
-  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MaxSize", QueueSizeValue (QueueSize (mode,modeSize*1500))),
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MaxSize", QueueSizeValue (QueueSize (mode,modeSize * 1500))),
                          true, "Verify that we can actually set the attribute MaxSize");
   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("UseEcn", BooleanValue (false)), true,
                          "Verify that we can actually set the attribute UseECN");
 
   queue->Initialize ();
   if (mode == QueueSizeUnit::BYTES)
+    {
       Enqueue (queue, pktSize, 100, true);
+    }
   else
+    {
       Enqueue (queue, 1, 100, true);
+    }
   DequeueWithDelay (queue, 0.005, 100);
   Simulator::Stop (Seconds (8.0));
   Simulator::Run ();
@@ -423,26 +420,28 @@ CobaltQueueDiscECNtest::RunECNtest (QueueSizeUnit mode)
   NS_TEST_EXPECT_MSG_NE (st.forcedDrop, 0, "There should be some forced drops");
   NS_TEST_EXPECT_MSG_EQ (st.forcedMark, 0, "There should no forced marks");
 
-
   // Test 6: Packets are ECN capable and Cobalt queue disc is ECN enabled
   queue = CreateObject<CobaltQueueDisc> ();
-   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MaxSize", QueueSizeValue (QueueSize (mode,modeSize*1500))),
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MaxSize", QueueSizeValue (QueueSize (mode,modeSize * 1500))),
                          true, "Verify that we can actually set the attribute MaxSize");
-   NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("UseEcn", BooleanValue (true)), true,
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("UseEcn", BooleanValue (true)), true,
                          "Verify that we can actually set the attribute UseECN");
 
   queue->Initialize ();
-   if (mode == QueueSizeUnit::BYTES)
+  if (mode == QueueSizeUnit::BYTES)
+    {
       Enqueue (queue, pktSize, 100, true);
+    }
   else
+    {
       Enqueue (queue, 1, 100, true);
+    }
   DequeueWithDelay (queue, 0.005, 100);
   Simulator::Stop (Seconds (8.0));
   Simulator::Run ();
   st = StaticCast<CobaltQueueDisc> (queue)->GetStats ();
   NS_TEST_EXPECT_MSG_NE (st.forcedMark, 0, "There should be some forced marks");
 }
-
 
 void
 CobaltQueueDiscECNtest::Enqueue (Ptr<CobaltQueueDisc> queue, uint32_t size, uint32_t nPkt, bool ecnCapable)
@@ -480,8 +479,6 @@ CobaltQueueDiscECNtest::DoRun (void)
   Simulator::Destroy ();
 }
 
-
-
 /**
  * \ingroup traffic-control-test
  * \ingroup tests
@@ -505,9 +502,8 @@ public:
    * \param mode the mode
    */
   void RunDropTest (QueueSizeUnit mode);
-  
-  void EnqueueWithDelay (Ptr<CobaltQueueDisc> queue, uint32_t size, uint32_t nPkt);
 
+  void EnqueueWithDelay (Ptr<CobaltQueueDisc> queue, uint32_t size, uint32_t nPkt);
 
 };
 
@@ -534,27 +530,31 @@ CobaltQueueDiscDropTest::RunDropTest (QueueSizeUnit mode)
       modeSize = 1;
     }
 
-queue = CreateObject<CobaltQueueDisc> ();
- NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MaxSize", QueueSizeValue (QueueSize (mode, modeSize*100))),
+  queue = CreateObject<CobaltQueueDisc> ();
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("MaxSize", QueueSizeValue (QueueSize (mode, modeSize * 100))),
                          true, "Verify that we can actually set the attribute MaxSize");
- NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("UseEcn", BooleanValue (true)), true,
-                       "Verify that we can actually set the attribute UseECN");
+  NS_TEST_EXPECT_MSG_EQ (queue->SetAttributeFailSafe ("UseEcn", BooleanValue (true)), true,
+                         "Verify that we can actually set the attribute UseECN");
 
-queue->Initialize ();
+  queue->Initialize ();
 
- if (mode == QueueSizeUnit::BYTES)
-    EnqueueWithDelay (queue, pktSize, 200);
-else
-    EnqueueWithDelay (queue, 1, 200);
+  if (mode == QueueSizeUnit::BYTES)
+    {
+      EnqueueWithDelay (queue, pktSize, 200);
+    }
+  else
+    {
+      EnqueueWithDelay (queue, 1, 200);
+    }
 
-Simulator::Stop (Seconds (8.0));
-Simulator::Run ();
+  Simulator::Stop (Seconds (8.0));
+  Simulator::Run ();
 
-st = StaticCast<CobaltQueueDisc> (queue)->GetStats ();
+  st = StaticCast<CobaltQueueDisc> (queue)->GetStats ();
 
 // The Pdrop value should increase, from it's default value of zero
-NS_TEST_EXPECT_MSG_NE (queue->GetPdrop(), 0, "Pdrop should be non-zero");
-NS_TEST_EXPECT_MSG_NE (st.qLimDrop, 0, "Drops due to queue overflow should be non-zero");
+  NS_TEST_EXPECT_MSG_NE (queue->GetPdrop (), 0, "Pdrop should be non-zero");
+  NS_TEST_EXPECT_MSG_NE (st.qLimDrop, 0, "Drops due to queue overflow should be non-zero");
 }
 
 void
@@ -567,7 +567,6 @@ CobaltQueueDiscDropTest::EnqueueWithDelay (Ptr<CobaltQueueDisc> queue, uint32_t 
       Simulator::Schedule (Time (Seconds ((i + 1) * delay)), &CobaltQueueDiscDropTest::Enqueue, this, queue, size, 1);
     }
 }
-
 
 void
 CobaltQueueDiscDropTest::Enqueue (Ptr<CobaltQueueDisc> queue, uint32_t size, uint32_t nPkt)

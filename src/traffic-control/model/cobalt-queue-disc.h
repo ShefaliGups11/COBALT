@@ -55,7 +55,6 @@ class TraceContainer;
 class CobaltQueueDisc : public QueueDisc
 {
 public:
-
   /**
    * \brief Get the type ID.
    * \return the object TypeId
@@ -162,7 +161,6 @@ public:
    */
   uint32_t GetDropNext (void);
 
-
   static constexpr const char* TARGET_EXCEEDED_DROP = "Target exceeded drop";  //!< Sojourn time above target
   static constexpr const char* OVERLIMIT_DROP = "Overlimit drop";  //!< Overlimit dropped packet
   static constexpr const char* unforcedDrop = "unforcedDrop";  //!< probability drops by blue
@@ -170,14 +168,12 @@ public:
   static constexpr const char* qLimDrop = "qlimit drop";  //!< Queue overflow
   static constexpr const char* forcedMark = "forcedMark";  //!< forced maeks by Codel on ECN-enabled
 
-
-
   /**
    * \brief Get the drop probability of Blue
    *
    * \returns The current value of Blue's drop probability
    */
-  double GetPdrop();
+  double GetPdrop ();
 
   /**
    * Assign a fixed random variable stream number to the random variables
@@ -198,17 +194,14 @@ public:
   uint32_t Time2CoDel (Time t);
 
 protected:
-
   /**
    * \brief Dispose of the object
    */
   virtual void DoDispose (void);
 
 private:
-
-  friend class::CobaltQueueDiscNewtonStepTest;  // Test code
-  friend class::CobaltQueueDiscControlLawTest;  // Test code
-
+  friend class ::CobaltQueueDiscNewtonStepTest;  // Test code
+  friend class ::CobaltQueueDiscControlLawTest;  // Test code
 
   virtual bool DoEnqueue (Ptr<QueueDiscItem> item);
   virtual Ptr<QueueDiscItem> DoDequeue (void);
@@ -271,29 +264,27 @@ private:
    */
   bool CoDelTimeBeforeEq (uint32_t a, uint32_t b);
 
-
   /**
    * Called when the queue becomes full to alter the drop probabilities of Blue
    */
-  void CobaltQueueFull(uint32_t now);
+  void CobaltQueueFull (uint32_t now);
 
   /**
    * Called when the queue becomes empty to alter the drop probabilities of Blue
    */
-  void CobaltQueueEmpty(uint32_t now);
+  void CobaltQueueEmpty (uint32_t now);
 
   /**
    * Called to decide whether the current packet should be dropped based on decisions taken by Blue and Codel working parallely
    * Returns true if the packet should be dropped, false otherwise
    */
-  bool CobaltShouldDrop(Ptr<QueueDiscItem> item, uint32_t now);
+  bool CobaltShouldDrop (Ptr<QueueDiscItem> item, uint32_t now);
 
   // Common to Codel and Blue
   // Maintained by Cobalt
   Stats m_stats;                          //!< Cobalt statistics
   // Supplied by user
   uint32_t m_minBytes;                    //!< Minimum bytes in queue to allow a packet drop
-
 
   // Codel parameters
   // Maintained by Cobalt
@@ -303,6 +294,7 @@ private:
   TracedValue<bool> m_dropping;           //!< True if in dropping state
   uint16_t m_recInvSqrt;                  //!< Reciprocal inverse square root
   uint32_t m_firstAboveTime;              //!< Time to declare sojourn time above target
+  
   // Supplied by user
   Time m_interval;                        //!< 100 ms sliding minimum time window width
   Time m_target;                          //!< 5 ms target queue delay
@@ -312,6 +304,7 @@ private:
   // Maintained by Cobalt
   Ptr<UniformRandomVariable> m_uv;        //!< Rng stream
   uint32_t m_lastUpdateTimeBlue;          //!< Blue's last update time for drop probability
+  
   // Supplied by user
   double m_increment;                     //!< increment value for marking probability
   double m_decrement;                     //!< decrement value for marking probability
