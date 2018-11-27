@@ -166,12 +166,12 @@ TypeId CobaltQueueDisc::GetTypeId (void)
                    MakeDoubleChecker<double> ())
     .AddAttribute ("Increment",
                    "Pdrop increment value",
-                   DoubleValue (0.0025),
+                   DoubleValue (0.003906),
                    MakeDoubleAccessor (&CobaltQueueDisc::m_increment),
                    MakeDoubleChecker<double> ())
     .AddAttribute ("Decrement",
                    "Pdrop decrement Value",
-                   DoubleValue (0.00025),
+                   DoubleValue (0.0002441),
                    MakeDoubleAccessor (&CobaltQueueDisc::m_decrement),
                    MakeDoubleChecker<double> ())
     .AddTraceSource ("Count",
@@ -504,6 +504,7 @@ CobaltQueueDisc::DoDequeue (void)
  */
 void CobaltQueueDisc::CobaltQueueFull (uint32_t now)
 {
+  NS_LOG_FUNCTION (this);
   NS_LOG_LOGIC ("Outside IF block");
   if (CoDelTimeAfter ((now - m_lastUpdateTimeBlue), Time2CoDel (m_target)))
     {
@@ -524,12 +525,13 @@ void CobaltQueueDisc::CobaltQueueFull (uint32_t now)
  */
 void CobaltQueueDisc::CobaltQueueEmpty (uint32_t now)
 {
+  NS_LOG_FUNCTION (this);
   if (m_Pdrop && CoDelTimeAfter ((now - m_lastUpdateTimeBlue), Time2CoDel (m_target)))
     {
       m_Pdrop = max (m_Pdrop - m_decrement, (double)0.0);
       m_lastUpdateTimeBlue = now;
     }
-  m_dropping = true;
+  m_dropping = false;
 
   if (m_count && CoDelTimeAfterEq ((now - m_dropNext), 0))
     {
@@ -542,13 +544,9 @@ void CobaltQueueDisc::CobaltQueueEmpty (uint32_t now)
 // Determines if Cobalt should drop the packet
 bool CobaltQueueDisc::CobaltShouldDrop (Ptr<QueueDiscItem> item, uint32_t now)
 {
+  NS_LOG_FUNCTION (this);
   bool drop = false, codelForcedDrop = false;
-  /* Simple BLUE implementation. Lack of ECN is deliberate. */
-  if (m_Pdrop)
-    {
-      double u = m_uv->GetValue ();
-      drop = (u < m_Pdrop);
-    }
+  
 
   /* Simplified Codel implementation */
   CobaltTimestampTag tag;
@@ -613,6 +611,12 @@ bool CobaltQueueDisc::CobaltShouldDrop (Ptr<QueueDiscItem> item, uint32_t now)
           schedule = now - m_dropNext;
           next_due = m_count && schedule >= 0;
         }
+    }
+    /* Simple BLUE implementation. Lack of ECN is deliberate. */
+  if (m_Pdrop)
+    {
+      double u = m_uv->GetValue ();
+      drop = drop | (u < m_Pdrop);
     }
 
   /* Overload the drop_next field as an activity timeout */
