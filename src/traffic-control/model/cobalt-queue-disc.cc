@@ -166,12 +166,12 @@ TypeId CobaltQueueDisc::GetTypeId (void)
                    MakeDoubleChecker<double> ())
     .AddAttribute ("Increment",
                    "Pdrop increment value",
-                   DoubleValue (0.003906),
+                   DoubleValue (1./256),
                    MakeDoubleAccessor (&CobaltQueueDisc::m_increment),
                    MakeDoubleChecker<double> ())
     .AddAttribute ("Decrement",
                    "Pdrop decrement Value",
-                   DoubleValue (0.0002441),
+                   DoubleValue (1./4096),
                    MakeDoubleAccessor (&CobaltQueueDisc::m_decrement),
                    MakeDoubleChecker<double> ())
     .AddTraceSource ("Count",
