@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2017 NITK Surathkal
+ * Copyright (c) 2018 NITK Surathkal
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,6 +17,12 @@
  *
  * Cobalt, the CODEL - BLUE - Alternate Queueing discipline
  * Based on linux code.
+ *
+ * Ported to ns-3 by: Vignesh Kannan <vignesh2496@gmail.com>
+ *                    Harsh Lara <harshapplefan@gmail.com>
+ *                    Jendaipou Palmei <jendaipoupalmei@gmail.com>
+ *                    Shefali Gupta <shefaligups11@gmail.com>
+ *                    Mohit P.Tahiliani <tahiliani@nitk.edu.in>
  */
 
 #include "ns3/log.h"
@@ -499,9 +505,7 @@ CobaltQueueDisc::DoDequeue (void)
     }
 }
 
-/* Call this when a packet had to be dropped due to queue overflow.
- * Returns true if the BLUE state was quiescent before but active after this call.
- */
+// Call this when a packet had to be dropped due to queue overflow.
 void CobaltQueueDisc::CobaltQueueFull (uint32_t now)
 {
   NS_LOG_FUNCTION (this);
@@ -520,9 +524,7 @@ void CobaltQueueDisc::CobaltQueueFull (uint32_t now)
     }
 }
 
-/* Call this when the queue was serviced but turned out to be empty.
- * Returns true if the BLUE state was active before but quiescent after this call.
- */
+// Call this when the queue was serviced but turned out to be empty.
 void CobaltQueueDisc::CobaltQueueEmpty (uint32_t now)
 {
   NS_LOG_FUNCTION (this);

@@ -15,6 +15,15 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
+ * Cobalt, the CODEL - BLUE - Alternate Queueing discipline
+ * Based on linux code.
+ *
+ * Ported to ns-3 by: Vignesh Kannan <vignesh2496@gmail.com>
+ *                    Harsh Lara <harshapplefan@gmail.com>
+ *                    Jendaipou Palmei <jendaipoupalmei@gmail.com>
+ *                    Shefali Gupta <shefaligups11@gmail.com>
+ *                    Mohit P.Tahiliani <tahiliani@nitk.edu.in>
+ *
  */
 
 #ifndef COBALT_H
