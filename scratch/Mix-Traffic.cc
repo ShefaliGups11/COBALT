@@ -51,56 +51,23 @@ CheckQueueSize (Ptr<QueueDisc> queue)
 }
 
 static void
-tracer (uint32_t oldval, uint32_t newval)
+CwndChange (Ptr<OutputStreamWrapper> stream, uint32_t oldCwnd, uint32_t newCwnd)
 {
-  std::ofstream fPlotQueue (dir + "cwndTraces/A.plotme", std::ios::out | std::ios::app);
-  fPlotQueue << Simulator::Now ().GetSeconds () << " " << newval / 1446.0 << std::endl;
-  fPlotQueue.close ();
-}
-
-static void
-tracer1 (uint32_t oldval, uint32_t newval)
-{
-  std::ofstream fPlotQueue (dir + "cwndTraces/B.plotme", std::ios::out | std::ios::app);
-  fPlotQueue << Simulator::Now ().GetSeconds () << " " << newval / 1446.0 << std::endl;
-  fPlotQueue.close ();
-}
-
-static void
-tracer2 (uint32_t oldval, uint32_t newval)
-{
-  std::ofstream fPlotQueue (dir + "cwndTraces/C.plotme", std::ios::out | std::ios::app);
-  fPlotQueue << Simulator::Now ().GetSeconds () << " " << newval / 1446.0 << std::endl;
-  fPlotQueue.close ();
-
-}
-
-static void
-tracer3 (uint32_t oldval, uint32_t newval)
-{
-  std::ofstream fPlotQueue (dir + "cwndTraces/D.plotme", std::ios::out | std::ios::app);
-  fPlotQueue << Simulator::Now ().GetSeconds () << " " << newval / 1446.0 << std::endl;
-  fPlotQueue.close ();
-}
-
-static void
-tracer4 (uint32_t oldval, uint32_t newval)
-{
-  std::ofstream fPlotQueue (dir + "cwndTraces/E.plotme", std::ios::out | std::ios::app);
-  fPlotQueue << Simulator::Now ().GetSeconds () << " " << newval / 1446.0 << std::endl;
-  fPlotQueue.close ();
+  *stream->GetStream () << Simulator::Now ().GetSeconds () << " " << newCwnd / 1446.0 << std::endl;
 }
 
 static void
 cwnd ()
 {
-  Config::ConnectWithoutContext ("/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/CongestionWindow", MakeCallback (&tracer));
-  Config::ConnectWithoutContext ("/NodeList/1/$ns3::TcpL4Protocol/SocketList/0/CongestionWindow", MakeCallback (&tracer1));
-  Config::ConnectWithoutContext ("/NodeList/2/$ns3::TcpL4Protocol/SocketList/0/CongestionWindow", MakeCallback (&tracer2));
-  Config::ConnectWithoutContext ("/NodeList/3/$ns3::TcpL4Protocol/SocketList/0/CongestionWindow", MakeCallback (&tracer3));
-  Config::ConnectWithoutContext ("/NodeList/4/$ns3::TcpL4Protocol/SocketList/0/CongestionWindow", MakeCallback (&tracer4));
-}
+  for (int i = 0; i < 5; i++)
+    {
+      AsciiTraceHelper asciiTraceHelper;
+      Ptr<OutputStreamWrapper> stream = asciiTraceHelper.CreateFileStream (dir + "cwndTraces/S1-" + std::to_string (i + 1) + ".plotme");
 
+      Config::ConnectWithoutContext ("/NodeList/" + std::to_string (i) + "/$ns3::TcpL4Protocol/SocketList/0/CongestionWindow", MakeBoundCallback (&CwndChange,stream));
+
+    }
+}
 
 int main (int argc, char *argv[])
 {
@@ -123,13 +90,11 @@ int main (int argc, char *argv[])
   TypeId qdTid;
   NS_ABORT_MSG_UNLESS (TypeId::LookupByNameFailSafe (queue_disc_type, &qdTid), "TypeId " << queue_disc_type << " not found");
 
-
   std::string bottleneckBandwidth = "10Mbps";
   std::string bottleneckDelay = "50ms";
 
   std::string accessBandwidth = "10Mbps";
   std::string accessDelay = "5ms";
-
 
   NodeContainer source;
   source.Create (5);
@@ -160,7 +125,6 @@ int main (int argc, char *argv[])
   TrafficControlHelper tchPfifo;
   uint16_t handle = tchPfifo.SetRootQueueDisc ("ns3::PfifoFastQueueDisc");
   tchPfifo.AddInternalQueues (handle, 3, "ns3::DropTailQueue", "MaxSize", StringValue ("1000p"));
-
 
   TrafficControlHelper tch;
   tch.SetRootQueueDisc (queue_disc_type);
@@ -221,9 +185,7 @@ int main (int argc, char *argv[])
   address.NewNetwork ();
   interfaces_sink = address.Assign (devices_sink);
 
-
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
-
 
   uint16_t port = 50000;
   uint16_t port1 = 50001;
@@ -232,19 +194,15 @@ int main (int argc, char *argv[])
   PacketSinkHelper sinkHelper ("ns3::TcpSocketFactory", sinkLocalAddress);
   PacketSinkHelper sinkHelper1 ("ns3::UdpSocketFactory", sinkLocalAddress1);
 
-
   // Configure application
   AddressValue remoteAddress (InetSocketAddress (interfaces_sink.GetAddress (1), port));
   AddressValue remoteAddress1 (InetSocketAddress (interfaces_sink.GetAddress (1), port1));
 
-  Config::SetDefault ("ns3::TcpSocket::SegmentSize", UintegerValue (1000));
   BulkSendHelper ftp ("ns3::TcpSocketFactory", Address ());
   ftp.SetAttribute ("Remote", remoteAddress);
   ftp.SetAttribute ("SendSize", UintegerValue (1000));
 
-
-  ApplicationContainer sourceApp = ftp.Install (source
-                                                );
+  ApplicationContainer sourceApp = ftp.Install (source);
   sourceApp.Start (Seconds (0));
   sourceApp.Stop (Seconds (stopTime - 1));
 
@@ -252,7 +210,6 @@ int main (int argc, char *argv[])
   ApplicationContainer sinkApp = sinkHelper.Install (sink);
   sinkApp.Start (Seconds (0));
   sinkApp.Stop (Seconds (stopTime));
-
 
   OnOffHelper clientHelper6 ("ns3::UdpSocketFactory", Address ());
   clientHelper6.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
