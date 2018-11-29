@@ -20,7 +20,6 @@
  *          Mohit P. Tahiliani <tahiliani@nitk.edu.in>
  */
 
-
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
 #include "ns3/flow-monitor-helper.h"
@@ -53,54 +52,22 @@ CheckQueueSize (Ptr<QueueDisc> queue)
 }
 
 static void
-tracer (uint32_t oldval, uint32_t newval)
+CwndChange (Ptr<OutputStreamWrapper> stream, uint32_t oldCwnd, uint32_t newCwnd)
 {
-  std::ofstream fPlotQueue (dir + "cwndTraces/A.plotme", std::ios::out | std::ios::app);
-  fPlotQueue << Simulator::Now ().GetSeconds () << " " << newval / 1446.0 << std::endl;
-  fPlotQueue.close ();
-}
-
-static void
-tracer1 (uint32_t oldval, uint32_t newval)
-{
-  std::ofstream fPlotQueue (dir + "cwndTraces/B.plotme", std::ios::out | std::ios::app);
-  fPlotQueue << Simulator::Now ().GetSeconds () << " " << newval / 1446.0 << std::endl;
-  fPlotQueue.close ();
-}
-
-static void
-tracer2 (uint32_t oldval, uint32_t newval)
-{
-  std::ofstream fPlotQueue (dir + "cwndTraces/C.plotme", std::ios::out | std::ios::app);
-  fPlotQueue << Simulator::Now ().GetSeconds () << " " << newval / 1446.0 << std::endl;
-  fPlotQueue.close ();
-
-}
-
-static void
-tracer3 (uint32_t oldval, uint32_t newval)
-{
-  std::ofstream fPlotQueue (dir + "cwndTraces/D.plotme", std::ios::out | std::ios::app);
-  fPlotQueue << Simulator::Now ().GetSeconds () << " " << newval / 1446.0 << std::endl;
-  fPlotQueue.close ();
-}
-
-static void
-tracer4 (uint32_t oldval, uint32_t newval)
-{
-  std::ofstream fPlotQueue (dir + "cwndTraces/E.plotme", std::ios::out | std::ios::app);
-  fPlotQueue << Simulator::Now ().GetSeconds () << " " << newval / 1446.0 << std::endl;
-  fPlotQueue.close ();
+  *stream->GetStream () << Simulator::Now ().GetSeconds () << " " << newCwnd / 1446.0 << std::endl;
 }
 
 static void
 cwnd ()
 {
-  Config::ConnectWithoutContext ("/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/CongestionWindow", MakeCallback (&tracer));
-  Config::ConnectWithoutContext ("/NodeList/1/$ns3::TcpL4Protocol/SocketList/0/CongestionWindow", MakeCallback (&tracer1));
-  Config::ConnectWithoutContext ("/NodeList/2/$ns3::TcpL4Protocol/SocketList/0/CongestionWindow", MakeCallback (&tracer2));
-  Config::ConnectWithoutContext ("/NodeList/3/$ns3::TcpL4Protocol/SocketList/0/CongestionWindow", MakeCallback (&tracer3));
-  Config::ConnectWithoutContext ("/NodeList/4/$ns3::TcpL4Protocol/SocketList/0/CongestionWindow", MakeCallback (&tracer4));
+  for (int i = 0; i < 5; i++)
+    {
+      AsciiTraceHelper asciiTraceHelper;
+      Ptr<OutputStreamWrapper> stream = asciiTraceHelper.CreateFileStream (dir + "cwndTraces/S1-" + std::to_string (i + 1) + ".plotme");
+
+      Config::ConnectWithoutContext ("/NodeList/" + std::to_string (i) + "/$ns3::TcpL4Protocol/SocketList/0/CongestionWindow", MakeBoundCallback (&CwndChange,stream));
+
+    }
 }
 
 
@@ -150,7 +117,6 @@ int main (int argc, char *argv[])
   Config::SetDefault ("ns3::CobaltQueueDisc::UseEcn", BooleanValue (useEcn));
   Config::SetDefault ("ns3::TcpSocketBase::EcnMode", StringValue (EcnMode));
   Config::SetDefault (queue_disc_type + "::MaxSize", QueueSizeValue (QueueSize ("200p")));
-
 
   InternetStackHelper internet;
   internet.InstallAll ();
