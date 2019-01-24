@@ -267,6 +267,8 @@ CobaltQueueDisc::InitializeParams (void)
 {
   // Cobalt parameters
   NS_LOG_FUNCTION (this);
+  m_recInvSqrtCache[0] = ~0;
+  CacheInit ();
   m_count = 0;
   m_dropping = false;
   m_recInvSqrt = ~0U >> REC_INV_SQRT_SHIFT;
@@ -360,6 +362,41 @@ CobaltQueueDisc::NewtonStep (void)
   val >>= 2; /* avoid overflow */
   val = (val * invsqrt) >> (32 - 2 + 1);
   m_recInvSqrt = val >> REC_INV_SQRT_SHIFT;
+}
+
+/* There is a big difference in timing between the accurate values placed in
+ * the cache and the approximations given by a single Newton step for small
+ * count values, particularly when stepping from count 1 to 2 or vice versa.
+ * Above 16, a single Newton step gives sufficient accuracy in either
+ * direction, given the precision stored.
+ *
+ * The magnitude of the error when stepping up to count 2 is such as to give
+ * the value that *should* have been produced at count 4.
+ */
+ 
+void 
+CobaltQueueDisc::CacheInit(void)
+{
+  m_recInvSqrt = ~0U;
+  m_recInvSqrtCache[0] = m_recInvSqrt;
+
+  for (m_count = 1; m_count < (uint32_t)(REC_INV_SQRT_CACHE); m_count++) 
+  {
+    NewtonStep();
+    NewtonStep();
+    NewtonStep();
+    NewtonStep();
+    m_recInvSqrtCache[m_count] = m_recInvSqrt;
+  }
+}
+
+void
+CobaltQueueDisc::InvSqrt(void)
+{
+  if (m_count < (uint32_t)REC_INV_SQRT_CACHE)
+     m_recInvSqrt = m_recInvSqrtCache[m_count];
+  else
+     NewtonStep();
 }
 
 uint32_t
@@ -538,7 +575,7 @@ void CobaltQueueDisc::CobaltQueueEmpty (uint32_t now)
   if (m_count && CoDelTimeAfterEq ((now - m_dropNext), 0))
     {
       m_count--;
-      NewtonStep ();
+      InvSqrt ();
       m_dropNext = ControlLaw (m_dropNext);
     }
 }
@@ -599,7 +636,7 @@ bool CobaltQueueDisc::CobaltShouldDrop (Ptr<QueueDiscItem> item, uint32_t now)
 
       m_count = max (m_count, m_count + 1);
 
-      NewtonStep ();
+      InvSqrt ();
       m_dropNext = ControlLaw (m_dropNext);
       schedule = now - m_dropNext;
     }
@@ -608,7 +645,7 @@ bool CobaltQueueDisc::CobaltShouldDrop (Ptr<QueueDiscItem> item, uint32_t now)
       while (next_due)
         {
           m_count--;
-          NewtonStep ();
+          InvSqrt ();
           m_dropNext = ControlLaw (m_dropNext);
           schedule = now - m_dropNext;
           next_due = m_count && schedule >= 0;

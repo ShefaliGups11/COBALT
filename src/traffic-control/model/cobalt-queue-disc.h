@@ -50,6 +50,7 @@ namespace ns3 {
  */
 static const int  COBALT_SHIFT = 10;
 
+#define REC_INV_SQRT_CACHE (16)
 #define DEFAULT_COBALT_LIMIT 1000
 #define REC_INV_SQRT_BITS (8 * sizeof(uint16_t))
 #define REC_INV_SQRT_SHIFT (32 - REC_INV_SQRT_BITS)
@@ -239,7 +240,10 @@ private:
    * \returns The new next drop time:
    */
   uint32_t ControlLaw (uint32_t t);
-
+  
+  void InvSqrt(void);
+  
+  void CacheInit(void);
   /**
    * Check if CoDel time a is successive to b
    * @param a left operand
@@ -301,7 +305,7 @@ private:
   TracedValue<uint32_t> m_dropNext;       //!< Time to drop next packet
   TracedValue<Time> m_sojourn;            //!< Time in queue
   TracedValue<bool> m_dropping;           //!< True if in dropping state
-  uint16_t m_recInvSqrt;                  //!< Reciprocal inverse square root
+  uint32_t m_recInvSqrt;                  //!< Reciprocal inverse square root
   uint32_t m_firstAboveTime;              //!< Time to declare sojourn time above target
   
   // Supplied by user
@@ -318,6 +322,7 @@ private:
   double m_increment;                     //!< increment value for marking probability
   double m_decrement;                     //!< decrement value for marking probability
   double m_Pdrop;                         //!< Drop Probability
+  uint32_t m_recInvSqrtCache[REC_INV_SQRT_CACHE] = {0};
 
 };
 
