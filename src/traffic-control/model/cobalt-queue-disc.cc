@@ -172,12 +172,12 @@ TypeId CobaltQueueDisc::GetTypeId (void)
                    MakeDoubleChecker<double> ())
     .AddAttribute ("Increment",
                    "Pdrop increment value",
-                   DoubleValue (1./256),
+                   DoubleValue (1. / 256),
                    MakeDoubleAccessor (&CobaltQueueDisc::m_increment),
                    MakeDoubleChecker<double> ())
     .AddAttribute ("Decrement",
                    "Pdrop decrement Value",
-                   DoubleValue (1./4096),
+                   DoubleValue (1. / 4096),
                    MakeDoubleAccessor (&CobaltQueueDisc::m_decrement),
                    MakeDoubleChecker<double> ())
     .AddTraceSource ("Count",
@@ -372,30 +372,34 @@ CobaltQueueDisc::NewtonStep (void)
  * The magnitude of the error when stepping up to count 2 is such as to give
  * the value that *should* have been produced at count 4.
  */
- 
-void 
-CobaltQueueDisc::CacheInit(void)
+
+void
+CobaltQueueDisc::CacheInit (void)
 {
   m_recInvSqrt = ~0U;
   m_recInvSqrtCache[0] = m_recInvSqrt;
 
-  for (m_count = 1; m_count < (uint32_t)(REC_INV_SQRT_CACHE); m_count++) 
-  {
-    NewtonStep();
-    NewtonStep();
-    NewtonStep();
-    NewtonStep();
-    m_recInvSqrtCache[m_count] = m_recInvSqrt;
-  }
+  for (m_count = 1; m_count < (uint32_t)(REC_INV_SQRT_CACHE); m_count++)
+    {
+      NewtonStep ();
+      NewtonStep ();
+      NewtonStep ();
+      NewtonStep ();
+      m_recInvSqrtCache[m_count] = m_recInvSqrt;
+    }
 }
 
 void
-CobaltQueueDisc::InvSqrt(void)
+CobaltQueueDisc::InvSqrt (void)
 {
   if (m_count < (uint32_t)REC_INV_SQRT_CACHE)
-     m_recInvSqrt = m_recInvSqrtCache[m_count];
+    {
+      m_recInvSqrt = m_recInvSqrtCache[m_count];
+    }
   else
-     NewtonStep();
+    {
+      NewtonStep ();
+    }
 }
 
 int64_t
@@ -584,7 +588,7 @@ bool CobaltQueueDisc::CobaltShouldDrop (Ptr<QueueDiscItem> item, int64_t now)
 {
   NS_LOG_FUNCTION (this);
   bool drop = false, codelForcedDrop = false;
-  
+
 
   /* Simplified Codel implementation */
   CobaltTimestampTag tag;
@@ -650,7 +654,7 @@ bool CobaltQueueDisc::CobaltShouldDrop (Ptr<QueueDiscItem> item, int64_t now)
           next_due = m_count && schedule >= 0;
         }
     }
-    /* Simple BLUE implementation. Lack of ECN is deliberate. */
+  /* Simple BLUE implementation. Lack of ECN is deliberate. */
   if (m_Pdrop)
     {
       double u = m_uv->GetValue ();

@@ -233,10 +233,10 @@ private:
    * \returns The new next drop time:
    */
   int64_t ControlLaw (int64_t t);
-  
-  void InvSqrt(void);
-  
-  void CacheInit(void);
+
+  void InvSqrt (void);
+
+  void CacheInit (void);
   /**
    * Check if CoDel time a is successive to b
    * @param a left operand
@@ -299,7 +299,7 @@ private:
   TracedValue<Time> m_sojourn;            //!< Time in queue
   TracedValue<bool> m_dropping;           //!< True if in dropping state
   uint32_t m_recInvSqrt;                  //!< Reciprocal inverse square root
-  
+
   // Supplied by user
   Time m_interval;                        //!< 100 ms sliding minimum time window width
   Time m_target;                          //!< 5 ms target queue delay
@@ -309,7 +309,7 @@ private:
   // Maintained by Cobalt
   Ptr<UniformRandomVariable> m_uv;        //!< Rng stream
   uint32_t m_lastUpdateTimeBlue;          //!< Blue's last update time for drop probability
-  
+
   // Supplied by user
   double m_increment;                     //!< increment value for marking probability
   double m_decrement;                     //!< decrement value for marking probability
