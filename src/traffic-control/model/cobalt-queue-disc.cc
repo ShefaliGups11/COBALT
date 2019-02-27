@@ -44,94 +44,9 @@
 
 namespace ns3 {
 
-
 NS_LOG_COMPONENT_DEFINE ("CobaltQueueDisc");
 
 NS_OBJECT_ENSURE_REGISTERED (CobaltQueueDisc);
-
-/**
- * CoDel time stamp, used to carry CoDel time informations.
- */
-class CobaltTimestampTag : public Tag
-{
-public:
-  CobaltTimestampTag ();
-  /**
-   * \brief Get the type ID.
-   * \return the object TypeId
-   */
-  static TypeId GetTypeId (void);
-  virtual TypeId GetInstanceTypeId (void) const;
-
-  virtual uint32_t GetSerializedSize (void) const;
-  virtual void Serialize (TagBuffer i) const;
-  virtual void Deserialize (TagBuffer i);
-  virtual void Print (std::ostream &os) const;
-
-  /**
-   * Gets the Tag creation time
-   * @return the time object stored in the tag
-   */
-  Time GetTxTime (void) const;
-private:
-  int64_t m_creationTime; //!< Tag creation time
-};
-
-CobaltTimestampTag::CobaltTimestampTag ()
-  : m_creationTime (Simulator::Now ().GetTimeStep ())
-{
-}
-
-TypeId
-CobaltTimestampTag::GetTypeId (void)
-{
-  static TypeId tid = TypeId ("ns3::CobaltTimestampTag")
-    .SetParent<Tag> ()
-    .AddConstructor<CobaltTimestampTag> ()
-    .AddAttribute ("CreationTime",
-                   "The time at which the timestamp was created",
-                   StringValue ("0.0s"),
-                   MakeTimeAccessor (&CobaltTimestampTag::GetTxTime),
-                   MakeTimeChecker ())
-  ;
-  return tid;
-}
-
-TypeId
-CobaltTimestampTag::GetInstanceTypeId (void) const
-{
-  return GetTypeId ();
-}
-
-uint32_t
-CobaltTimestampTag::GetSerializedSize (void) const
-{
-  return 8;
-}
-
-void
-CobaltTimestampTag::Serialize (TagBuffer i) const
-{
-  i.WriteU64 (m_creationTime);
-}
-
-void
-CobaltTimestampTag::Deserialize (TagBuffer i)
-{
-  m_creationTime = i.ReadU64 ();
-}
-
-void
-CobaltTimestampTag::Print (std::ostream &os) const
-{
-  os << "CreationTime=" << m_creationTime;
-}
-
-Time
-CobaltTimestampTag::GetTxTime (void) const
-{
-  return TimeStep (m_creationTime);
-}
 
 TypeId CobaltQueueDisc::GetTypeId (void)
 {
@@ -293,13 +208,13 @@ CobaltQueueDisc::GetStats ()
 bool
 CobaltQueueDisc::CoDelTimeAfter (int64_t a, int64_t b)
 {
-  return  ((int)(a) - (int)(b) > 0);
+  return  ((int64_t)(a) - (int64_t)(b) > 0);
 }
 
 bool
 CobaltQueueDisc::CoDelTimeAfterEq (int64_t a, int64_t b)
 {
-  return ((int)(a) - (int)(b) >= 0);
+  return ((int64_t)(a) - (int64_t)(b) >= 0);
 }
 
 bool
@@ -311,10 +226,10 @@ CobaltQueueDisc::CoDelTimeBefore (int64_t a, int64_t b)
 bool
 CobaltQueueDisc::CoDelTimeBeforeEq (int64_t a, int64_t b)
 {
-  return ((int)(a) - (int)(b) <= 0);
+  return ((int64_t)(a) - (int64_t)(b) <= 0);
 }
 
-uint32_t
+int64_t
 CobaltQueueDisc::Time2CoDel (Time t)
 {
   return (t.GetNanoSeconds ());
@@ -490,10 +405,6 @@ CobaltQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
       return false;
     }
 
-  // Tag packet with current time for DoDequeue() to compute sojourn time
-  CobaltTimestampTag tag;
-  p->AddPacketTag (tag);
-
   bool retval = GetInternalQueue (0)->Enqueue (item);
 
   // If Queue::Enqueue fails, QueueDisc::Drop is called by the internal queue
@@ -591,11 +502,7 @@ bool CobaltQueueDisc::CobaltShouldDrop (Ptr<QueueDiscItem> item, int64_t now)
 
 
   /* Simplified Codel implementation */
-  CobaltTimestampTag tag;
-  bool found = item->GetPacket ()->RemovePacketTag (tag);
-  NS_ASSERT_MSG (found, "found a packet without an input timestamp tag");
-  NS_UNUSED (found);          //silence compiler warning
-  Time delta = Simulator::Now () - tag.GetTxTime ();
+  Time delta = Simulator::Now () - item->GetTimeStamp ();
   NS_LOG_INFO ("Sojourn time " << delta.GetSeconds ());
   m_sojourn = delta;
   int64_t sojournTime = Time2CoDel (delta);

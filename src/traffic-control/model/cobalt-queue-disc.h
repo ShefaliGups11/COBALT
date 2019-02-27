@@ -194,7 +194,7 @@ public:
    * @param t the input Time Object
    * @return the unsigned 32-bit integer representation
    */
-  uint32_t Time2CoDel (Time t);
+  int64_t Time2CoDel (Time t);
 
 protected:
   /**
