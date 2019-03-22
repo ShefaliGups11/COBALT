@@ -21,9 +21,14 @@ Model Description
 The source code for the Cobalt model is located in the directory
 ``src/traffic-control/model`` and consists of 2 files `cobalt-queue-disc.h` and
 `cobalt-queue-disc.cc` defining a CobaltQueueDisc class and a helper
-CobaltTimestampTag class. The code was ported to |ns3| by Vignesh Kanan and
-Harsh Lara based on Linux kernel code implemented by Kathleen Nichols,
-Van Jacobson, Eric Dumazet, Michael D. Taht, and Jonathan Morton.
+CobaltTimestampTag class. The code was ported to |ns3| by Vignesh Kanan,
+Harsh Lara, Shefali Gupta, Jendaipou Palmei and Mohit P. Tahiliani based on 
+Linux kernel code implemented by Kathleen Nichols, Van Jacobson, Eric Dumazet, 
+Michael D. Taht, and Jonathan Morton.  
+
+Stefano Avallone and Pasquale Imputato extend a great deal of help by providing 
+the results obtained from the Linux model which is used to test its correctness 
+by comparing with the results obtained from |ns3| model.
 
 * class :cpp:class:`CobaltQueueDisc`: This class implements the main Cobalt
 algorithm:
@@ -45,11 +50,6 @@ dropped based on the dropping state of CoDel and drop probability of BLUE.
 The idea is to have both algorithms running in parallel and their effectiveness
 is decided by their respective parameters (Pdrop of BLUE and dropping state of
 CoDel). If either of them decide to drop the packet, the packet is dropped.
-CoDel also considers whether ECN is enabled in both the router as well as the
-incoming packet and chooses to mark instead of drop if the above condition
-holds. On the other hand, BLUE does not consider ECN capability and hence only
-has the choice of dropping packets and there is no question of marking.
-
 
   * ``CobaltQueueDisc::DoDequeue ()``: This routine performs the actual packet
 ``drop based on ``CobaltQueueDisc::ShouldDrop ()``'s return value and schedules
@@ -88,11 +88,9 @@ The key attributes that the CobaltQueue Disc class holds include the following:
 * ``Interval:`` The sliding-minimum window. The default value is 100 ms.
 * ``Target:`` The Cobalt algorithm target queue delay. The default value is
 5 ms.
-* ``UseEcn:`` Set to true if ECN is used. Packets are marked instead of being
-dropped.
 * ``Pdrop:`` Value of drop probability.
-* ``Increment:`` Increment value of drop probability. Default value is 0.0025 .
-* ``Decrement:`` Decrement value of drop probability. Default value is 0.00025 .
+* ``Increment:`` Increment value of drop probability. Default value is 1./256 .
+* ``Decrement:`` Decrement value of drop probability. Default value is 1./4096 .
 * ``Count:`` Cobalt count.
 * ``DropState:`` Dropping state of Cobalt. Default value is false.
 * ``Sojourn:`` Per packet time spent in the queue.
@@ -118,14 +116,7 @@ defined in `src/traffic-control/test/Cobalt-queue-test-suite.cc`.
 The suite includes 5 test cases:
 
 * Test 1: Simple enqueue/dequeue with no drops.
-* Test 2: Cobalt Newton step validation against explicit port Linux
-implementation.
-* Test 3: Cobalt ControlLaw validation against explicit port of Linux
-implementation.
-* Test 4: ECN enabled in Cobalt but not in incoming packets.
-* Test 5: ECN disabled in Cobalt but enabled in incoming packets.
-* Test 6: ECN enabled for both Cobalt and the incoming packets.
-* Test 7: Change of Blue's drop probability upon queue full
+* Test 2: Change of Blue's drop probability upon queue full
 (Activation of Blue).
 
 The test suite can be run using the following commands:
