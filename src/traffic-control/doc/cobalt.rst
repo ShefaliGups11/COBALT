@@ -8,8 +8,8 @@ This chapter describes the COBALT (CoDel BLUE Alternate) ([Cake16]_) queue disc
 implementation in |ns3|.
 
 COBALT queue disc is an integral component of CAKE smart queue management system.
-It is a combination of the CoDel ([Kath17]_) and BLUE active queue
-management algorithms.
+It is a combination of the CoDel ([Kath17]_) and BLUE ([BLUE02]_) Active Queue
+Management algorithms.
 
 
 Model Description
@@ -20,14 +20,13 @@ The source code for the COBALT model is located in the directory
 `cobalt-queue-disc.cc` defining a CobaltQueueDisc class and a helper
 CobaltTimestampTag class. The code was ported to |ns3| by Vignesh Kanan,
 Harsh Lara, Shefali Gupta, Jendaipou Palmei and Mohit P. Tahiliani based on 
-Linux kernel code.
+the Linux kernel code.
 
 Stefano Avallone and Pasquale Imputato helped in verifying the correctness of 
 COBALT model in |ns3| by comparing the results obtained from it to those obtained
 from the Linux model of COBALT.
 
-* class :cpp:class:`CobaltQueueDisc`: This class implements the main Cobalt
-algorithm:
+* class :cpp:class:`CobaltQueueDisc`: This class implements the main Cobalt algorithm:
 
   * ``CobaltQueueDisc::DoEnqueue ()``: This routine tags a packet with the
 current time before pushing it into the queue.  The timestamp tag is used by
