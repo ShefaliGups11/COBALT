@@ -106,8 +106,6 @@ public:
 
   static constexpr const char* TARGET_EXCEEDED_DROP = "Target exceeded drop";  //!< Sojourn time above target
   static constexpr const char* OVERLIMIT_DROP = "Overlimit drop";  //!< Overlimit dropped packet
-  static constexpr const char* UNFORCED_DROP = "unforcedDrop";  //!< probability drops by blue
-  static constexpr const char* FORCED_DROP = "forcedDrop";  //!< Forced drops by Codel or blue on Non-ECN packets in the dropping state
   static constexpr const char* FORCED_MARK = "forcedMark";  //!< forced marks by Codel on ECN-enabled
 
   /**

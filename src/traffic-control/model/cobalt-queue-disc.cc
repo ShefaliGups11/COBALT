@@ -454,8 +454,7 @@ void CobaltQueueDisc::CobaltQueueEmpty (int64_t now)
 bool CobaltQueueDisc::CobaltShouldDrop (Ptr<QueueDiscItem> item, int64_t now)
 {
   NS_LOG_FUNCTION (this);
-  bool drop = false, codelForcedDrop = false;
-
+  bool drop = false;
 
   /* Simplified Codel implementation */
   Time delta = Simulator::Now () - item->GetTimeStamp ();
@@ -486,11 +485,8 @@ bool CobaltQueueDisc::CobaltShouldDrop (Ptr<QueueDiscItem> item, int64_t now)
     {
       /* Check for marking possibility only if BLUE decides NOT to drop. */
       /* Check if router and packet, both have ECN enabled. Only if this is true, mark the packet. */
-      if (!(drop = !(m_useEcn && Mark (item, FORCED_MARK))))
-        {
-          codelForcedDrop = true;
-        }
-
+      drop = !(m_useEcn && Mark (item, FORCED_MARK));
+        
       m_count = max (m_count, m_count + 1);
 
       InvSqrt ();
@@ -523,19 +519,6 @@ bool CobaltQueueDisc::CobaltShouldDrop (Ptr<QueueDiscItem> item, int64_t now)
   else if (schedule > 0 && !drop)
     {
       m_dropNext = now;
-    }
-
-  // Updating stats
-  if (drop)
-    {
-      if (codelForcedDrop || m_Pdrop == 1.0)
-        {
-          DropAfterDequeue (item, FORCED_DROP);
-        }
-      else
-        {
-          DropAfterDequeue (item, UNFORCED_DROP);
-        }
     }
 
   return drop;
