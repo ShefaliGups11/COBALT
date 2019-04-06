@@ -35,12 +35,6 @@
 #include "ns3/net-device-queue-interface.h"
 #include <climits>
 
-/*
- * COBALT operates the Codel and BLUE algorithms in parallel, in order
- * to obtain the best features of each.  Codel is excellent on flows
- * which respond to congestion signals in a TCP-like way.  BLUE is far
- * more effective on unresponsive flows.
- */
 
 namespace ns3 {
 
@@ -81,7 +75,7 @@ TypeId CobaltQueueDisc::GetTypeId (void)
                    MakeBooleanAccessor (&CobaltQueueDisc::m_useEcn),
                    MakeBooleanChecker ())
     .AddAttribute ("Pdrop",
-                   "Marking Probabilty",
+                   "Marking Probability",
                    DoubleValue (0),
                    MakeDoubleAccessor (&CobaltQueueDisc::m_Pdrop),
                    MakeDoubleChecker<double> ())
@@ -103,10 +97,6 @@ TypeId CobaltQueueDisc::GetTypeId (void)
                      "Dropping state",
                      MakeTraceSourceAccessor (&CobaltQueueDisc::m_dropping),
                      "ns3::TracedValueCallback::Bool")
-    .AddTraceSource ("Sojourn",
-                     "Time in the queue",
-                     MakeTraceSourceAccessor (&CobaltQueueDisc::m_sojourn),
-                     "ns3::Time::TracedValueCallback")
     .AddTraceSource ("DropNext",
                      "Time until next packet drop",
                      MakeTraceSourceAccessor (&CobaltQueueDisc::m_dropNext),
@@ -189,20 +179,6 @@ CobaltQueueDisc::InitializeParams (void)
   m_recInvSqrt = ~0U;
   m_lastUpdateTimeBlue = 0;
   m_dropNext = 0;
-  m_sojourn = 0;
-
-  // Stats
-  m_stats.forcedDrop = 0;
-  m_stats.unforcedDrop = 0;
-  m_stats.qLimDrop = 0;
-  m_stats.forcedMark = 0;
-}
-
-CobaltQueueDisc::Stats
-CobaltQueueDisc::GetStats ()
-{
-  NS_LOG_FUNCTION (this);
-  return m_stats;
 }
 
 bool
@@ -251,18 +227,6 @@ int64_t
 CobaltQueueDisc::GetDropNext (void)
 {
   return m_dropNext;
-}
-
-uint32_t
-CobaltQueueDisc::GetDropOverLimit (void)
-{
-  return m_stats.qLimDrop;
-}
-
-uint32_t
-CobaltQueueDisc::GetDropCount (void)
-{
-  return m_stats.forcedDrop;
 }
 
 void
@@ -324,13 +288,6 @@ CobaltQueueDisc::ControlLaw (int64_t t)
   return t + ReciprocalDivide (Time2CoDel (m_interval), m_recInvSqrt);
 }
 
-Time
-CobaltQueueDisc::GetQueueDelay (void)
-{
-  NS_LOG_FUNCTION (this);
-  return m_sojourn;
-}
-
 void
 CobaltQueueDisc::DoDispose (void)
 {
@@ -340,7 +297,7 @@ CobaltQueueDisc::DoDispose (void)
 }
 
 Ptr<const QueueDiscItem>
-CobaltQueueDisc::DoPeek (void) const
+CobaltQueueDisc::DoPeek (void)
 {
   NS_LOG_FUNCTION (this);
   if (GetInternalQueue (0)->IsEmpty ())
@@ -401,7 +358,6 @@ CobaltQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
       // Call this to update Blue's drop probability
       CobaltQueueFull (now);
       DropBeforeEnqueue (item, OVERLIMIT_DROP);
-      m_stats.qLimDrop++;
       return false;
     }
 
@@ -504,7 +460,6 @@ bool CobaltQueueDisc::CobaltShouldDrop (Ptr<QueueDiscItem> item, int64_t now)
   /* Simplified Codel implementation */
   Time delta = Simulator::Now () - item->GetTimeStamp ();
   NS_LOG_INFO ("Sojourn time " << delta.GetSeconds ());
-  m_sojourn = delta;
   int64_t sojournTime = Time2CoDel (delta);
   int64_t schedule = now - m_dropNext;
   bool over_target = CoDelTimeAfter (sojournTime, Time2CoDel (m_target));
@@ -531,17 +486,9 @@ bool CobaltQueueDisc::CobaltShouldDrop (Ptr<QueueDiscItem> item, int64_t now)
     {
       /* Check for marking possibility only if BLUE decides NOT to drop. */
       /* Check if router and packet, both have ECN enabled. Only if this is true, mark the packet. */
-      if (!drop)
+      if (!(drop = !(m_useEcn && Mark (item, FORCED_MARK))))
         {
-          drop = !(m_useEcn && item->Mark ());
-          if (!drop)
-            {
-              m_stats.forcedMark++;
-            }
-          else
-            {
-              codelForcedDrop = true;
-            }
+          codelForcedDrop = true;
         }
 
       m_count = max (m_count, m_count + 1);
@@ -583,11 +530,11 @@ bool CobaltQueueDisc::CobaltShouldDrop (Ptr<QueueDiscItem> item, int64_t now)
     {
       if (codelForcedDrop || m_Pdrop == 1.0)
         {
-          m_stats.forcedDrop++;
+          DropAfterDequeue (item, FORCED_DROP);
         }
       else
         {
-          m_stats.unforcedDrop++;
+          DropAfterDequeue (item, UNFORCED_DROP);
         }
     }
 

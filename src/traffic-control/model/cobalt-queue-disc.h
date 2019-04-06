@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2017 NITK Surathkal
+ * Copyright (c) 2018 NITK Surathkal
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -54,6 +54,11 @@ class TraceContainer;
  * \ingroup traffic-control
  *
  * \brief COBALT packet queue disc
+ *
+ * COBALT operates the Codel and BLUE algorithms in parallel, in order
+ * to obtain the best features of each.  Codel is excellent on flows
+ * which respond to congestion signals in a TCP-like way.  BLUE is far
+ * more effective on unresponsive flows.
  */
 class CobaltQueueDisc : public QueueDisc
 {
@@ -79,71 +84,6 @@ public:
   virtual ~CobaltQueueDisc ();
 
   /**
-   * \brief Stats
-   */
-  typedef struct
-  {
-    uint32_t unforcedDrop;  //!< Probability drops by Blue
-    uint32_t forcedDrop;    //!< Forced drops by Codel or Blue on Non-ECN packets in the dropping state
-    uint32_t qLimDrop;      //!< Queue overflow
-    uint32_t forcedMark;    //!< Forced marks by Codel on ECN-enabled packets in the dropping state
-  } Stats;
-
-  uint32_t GetDropCount (void);
-  uint32_t GetDropOverLimit (void);
-
-  /**
-   * \brief Drop types
-   */
-  enum
-  {
-    DTYPE_NONE,        //!< (0) Ok, no drop
-    DTYPE_FORCED,      //!< (1) A "forced" drop
-    DTYPE_UNFORCED,    //!< (2) An "unforced" (random) drop
-  };
-
-  /**
-   * \brief Enumeration of the modes supported in the class.
-   *
-   */
-  enum QueueDiscMode
-  {
-    PACKETS,     /**< (0) Use number of packets for maximum queue disc size*/
-    BYTES,       /**< (1) Use number of bytes for maximum queue disc size*/
-  };
-
-  /**
-   * \brief Set the operating mode of this queue disc.
-   *
-   * \param mode The operating mode of this queue disc.
-   */
-  void SetMode (QueueDiscMode mode);
-
-  /**
-   * \brief Get the operating mode of this queue disc.
-   *
-   * \returns The operating mode of this queue disc.
-   */
-  QueueDiscMode GetMode (void);
-
-  /**
-   * \brief Get the current value of the queue in bytes or packets.
-   *
-   * \returns The queue size in bytes or packets.
-   */
-  uint32_t GetQueueSize (void);
-
-  Time GetQueueDelay (void);
-
-  /**
-   * \brief Get the Cobalt statistics after running.
-   *
-   * \returns The drop statistics.
-   */
-  Stats GetStats ();
-
-
-  /**
    * \brief Get the target queue delay
    *
    * \returns The target queue delay
@@ -166,10 +106,9 @@ public:
 
   static constexpr const char* TARGET_EXCEEDED_DROP = "Target exceeded drop";  //!< Sojourn time above target
   static constexpr const char* OVERLIMIT_DROP = "Overlimit drop";  //!< Overlimit dropped packet
-  static constexpr const char* unforcedDrop = "unforcedDrop";  //!< probability drops by blue
-  static constexpr const char* forcedDrop = "forcedDrop";  //!< Forced drops by Codel or blue on Non-ECN packets in the dropping state
-  static constexpr const char* qLimDrop = "qlimit drop";  //!< Queue overflow
-  static constexpr const char* forcedMark = "forcedMark";  //!< forced maeks by Codel on ECN-enabled
+  static constexpr const char* UNFORCED_DROP = "unforcedDrop";  //!< probability drops by blue
+  static constexpr const char* FORCED_DROP = "forcedDrop";  //!< Forced drops by Codel or blue on Non-ECN packets in the dropping state
+  static constexpr const char* FORCED_MARK = "forcedMark";  //!< forced marks by Codel on ECN-enabled
 
   /**
    * \brief Get the drop probability of Blue
@@ -208,7 +147,7 @@ private:
 
   virtual bool DoEnqueue (Ptr<QueueDiscItem> item);
   virtual Ptr<QueueDiscItem> DoDequeue (void);
-  virtual Ptr<const QueueDiscItem> DoPeek (void) const;
+  virtual Ptr<const QueueDiscItem> DoPeek (void);
   virtual bool CheckConfig (void);
 
   /**
@@ -296,7 +235,6 @@ private:
   // Maintained by Cobalt
   TracedValue<uint32_t> m_count;          //!< Number of packets dropped since entering drop state
   TracedValue<int64_t> m_dropNext;       //!< Time to drop next packet
-  TracedValue<Time> m_sojourn;            //!< Time in queue
   TracedValue<bool> m_dropping;           //!< True if in dropping state
   uint32_t m_recInvSqrt;                  //!< Reciprocal inverse square root
 
