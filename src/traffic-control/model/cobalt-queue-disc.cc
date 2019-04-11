@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2018 NITK Surathkal
+ * Copyright (c) 2019 NITK Surathkal
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -15,14 +15,14 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * Cobalt, the CODEL - BLUE - Alternate Queueing discipline
+ * Cobalt, the CoDel - BLUE - Alternate Queueing discipline
  * Based on linux code.
  *
  * Ported to ns-3 by: Vignesh Kannan <vignesh2496@gmail.com>
  *                    Harsh Lara <harshapplefan@gmail.com>
  *                    Jendaipou Palmei <jendaipoupalmei@gmail.com>
  *                    Shefali Gupta <shefaligups11@gmail.com>
- *                    Mohit P.Tahiliani <tahiliani@nitk.edu.in>
+ *                    Mohit P. Tahiliani <tahiliani@nitk.edu.in>
  */
 
 #include "ns3/log.h"
@@ -241,16 +241,6 @@ CobaltQueueDisc::NewtonStep (void)
   val = (val * invsqrt) >> (32 - 2 + 1);
   m_recInvSqrt = val;
 }
-
-/* There is a big difference in timing between the accurate values placed in
- * the cache and the approximations given by a single Newton step for small
- * count values, particularly when stepping from count 1 to 2 or vice versa.
- * Above 16, a single Newton step gives sufficient accuracy in either
- * direction, given the precision stored.
- *
- * The magnitude of the error when stepping up to count 2 is such as to give
- * the value that *should* have been produced at count 4.
- */
 
 void
 CobaltQueueDisc::CacheInit (void)
@@ -486,7 +476,7 @@ bool CobaltQueueDisc::CobaltShouldDrop (Ptr<QueueDiscItem> item, int64_t now)
       /* Check for marking possibility only if BLUE decides NOT to drop. */
       /* Check if router and packet, both have ECN enabled. Only if this is true, mark the packet. */
       drop = !(m_useEcn && Mark (item, FORCED_MARK));
-        
+
       m_count = max (m_count, m_count + 1);
 
       InvSqrt ();

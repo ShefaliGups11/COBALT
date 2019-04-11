@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2018 NITK Surathkal
+ * Copyright (c) 2019 NITK Surathkal
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -15,14 +15,14 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * Cobalt, the CODEL - BLUE - Alternate Queueing discipline
+ * Cobalt, the CoDel - BLUE - Alternate Queueing discipline
  * Based on linux code.
  *
  * Ported to ns-3 by: Vignesh Kannan <vignesh2496@gmail.com>
  *                    Harsh Lara <harshapplefan@gmail.com>
  *                    Jendaipou Palmei <jendaipoupalmei@gmail.com>
  *                    Shefali Gupta <shefaligups11@gmail.com>
- *                    Mohit P.Tahiliani <tahiliani@nitk.edu.in>
+ *                    Mohit P. Tahiliani <tahiliani@nitk.edu.in>
  *
  */
 
@@ -39,11 +39,7 @@
 #include "ns3/random-variable-stream.h"
 #include "ns3/trace-source-accessor.h"
 
-class CobaltQueueDiscNewtonStepTest;  // Forward declaration for unit test
-class CobaltQueueDiscControlLawTest;  // Forward declaration for unit test
-
 namespace ns3 {
-
 
 #define REC_INV_SQRT_CACHE (16)
 #define DEFAULT_COBALT_LIMIT 1000
@@ -53,11 +49,11 @@ class TraceContainer;
 /**
  * \ingroup traffic-control
  *
- * \brief COBALT packet queue disc
+ * \brief Cobalt packet queue disc
  *
- * COBALT operates the Codel and BLUE algorithms in parallel, in order
- * to obtain the best features of each.  Codel is excellent on flows
- * which respond to congestion signals in a TCP-like way.  BLUE is far
+ * Cobalt uses CoDel and BLUE algorithms in parallel, in order
+ * to obtain the best features of each. CoDel is excellent on flows
+ * which respond to congestion signals in a TCP-like way. BLUE is far
  * more effective on unresponsive flows.
  */
 class CobaltQueueDisc : public QueueDisc
@@ -140,9 +136,6 @@ protected:
   virtual void DoDispose (void);
 
 private:
-  friend class ::CobaltQueueDiscNewtonStepTest;  // Test code
-  friend class ::CobaltQueueDiscControlLawTest;  // Test code
-
   virtual bool DoEnqueue (Ptr<QueueDiscItem> item);
   virtual Ptr<QueueDiscItem> DoDequeue (void);
   virtual Ptr<const QueueDiscItem> DoPeek (void);
@@ -173,7 +166,17 @@ private:
 
   void InvSqrt (void);
 
+  /* There is a big difference in timing between the accurate values placed in
+ * the cache and the approximations given by a single Newton step for small
+ * count values, particularly when stepping from count 1 to 2 or vice versa.
+ * Above 16, a single Newton step gives sufficient accuracy in either
+ * direction, given the precision stored.
+ *
+ * The magnitude of the error when stepping up to count 2 is such as to give
+ * the value that *should* have been produced at count 4.
+ */
   void CacheInit (void);
+
   /**
    * Check if CoDel time a is successive to b
    * @param a left operand
@@ -223,7 +226,7 @@ private:
    */
   bool CobaltShouldDrop (Ptr<QueueDiscItem> item, int64_t now);
 
-  // Common to Codel and Blue
+  // Common to CoDel and Blue
   // Maintained by Cobalt
   Stats m_stats;                          //!< Cobalt statistics
   // Supplied by user
@@ -235,6 +238,7 @@ private:
   TracedValue<int64_t> m_dropNext;       //!< Time to drop next packet
   TracedValue<bool> m_dropping;           //!< True if in dropping state
   uint32_t m_recInvSqrt;                  //!< Reciprocal inverse square root
+  uint32_t m_recInvSqrtCache[REC_INV_SQRT_CACHE] = {0};   //!< Cache to maintain some initial values of InvSqrt
 
   // Supplied by user
   Time m_interval;                        //!< 100 ms sliding minimum time window width
@@ -250,7 +254,6 @@ private:
   double m_increment;                     //!< increment value for marking probability
   double m_decrement;                     //!< decrement value for marking probability
   double m_Pdrop;                         //!< Drop Probability
-  uint32_t m_recInvSqrtCache[REC_INV_SQRT_CACHE] = {0};
 
 };
 
