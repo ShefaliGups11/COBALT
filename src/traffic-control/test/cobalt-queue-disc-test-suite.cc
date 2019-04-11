@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2018 NITK Surathkal
+ * Copyright (c) 2019 NITK Surathkal
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -19,7 +19,7 @@
  *                    Harsh Lara <harshapplefan@gmail.com>
  *                    Jendaipou Palmei <jendaipoupalmei@gmail.com>
  *                    Shefali Gupta <shefaligups11@gmail.com>
- *                    Mohit P.Tahiliani <tahiliani@nitk.edu.in>
+ *                    Mohit P. Tahiliani <tahiliani@nitk.edu.in>
  */
 
 #include "ns3/test.h"
@@ -72,7 +72,7 @@ private:
 
 CobaltQueueDiscTestItem::CobaltQueueDiscTestItem (Ptr<Packet> p, const Address & addr,uint16_t protocol, bool ecnCapable)
   : QueueDiscItem (p, addr, ecnCapable),
-    m_ecnCapablePacket (ecnCapable)
+  m_ecnCapablePacket (ecnCapable)
 {
 }
 
