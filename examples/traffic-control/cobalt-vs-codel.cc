@@ -35,11 +35,11 @@
 
 // The Network Topology used is Dumbbell topology
 // consisting of 7 senders and 1 recievers with
-// 5 TCP flows and 2 UDP flows
+// 5 TCP flows and 2 UDP flows.
 // Congestion window and Queue size traces will be
-// stored in MixTraffic/QueueDisc Name
-// directory inside cwndTraces and queueTraces
-// subdirectory respectively
+// generated and stored in MixTraffic/QueueDisc
+// directory, with cwndTraces and queueTraces
+// subdirectory respectively.
 
 using namespace ns3;
 
