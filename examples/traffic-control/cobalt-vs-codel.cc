@@ -33,13 +33,11 @@
 #include "ns3/traffic-control-module.h"
 #include  <string>
 
-// The Network Topology used is Dumbbell topology
-// consisting of 7 senders and 1 recievers with
-// 5 TCP flows and 2 UDP flows.
-// Congestion window and Queue size traces will be
-// generated and stored in MixTraffic/QueueDisc
-// directory, with cwndTraces and queueTraces
-// subdirectory respectively.
+// Dumbbell topology with 7 senders and 1 receiver
+// is used for this example. On successful completion,
+// the Congestion window and Queue size traces get stored
+// in MixTraffic/ directory, inside cwndTraces and
+// queueTraces sub-directories, respectively.
 
 using namespace ns3;
 
@@ -86,16 +84,18 @@ void experiment (std::string queue_disc_type)
   std::string accessBandwidth = "10Mbps";
   std::string accessDelay = "5ms";
 
-  // Create senders, gateway and sinks
+  // Create sender
   NodeContainer tcpSender;
   tcpSender.Create (5);
 
   NodeContainer udpSender;
   udpSender.Create (2);
-
+  
+  // Create gateway
   NodeContainer gateway;
   gateway.Create (2);
 
+  // Create sink
   NodeContainer sink;
   sink.Create (1);
 
@@ -124,11 +124,11 @@ void experiment (std::string queue_disc_type)
 
   // Configure the senders and sinks net devices
   // and the channels between the senders/sinks and the gateways
-  NetDeviceContainer devices[5];
+  NetDeviceContainer devices [5];
   for (uint8_t i = 0; i < 5; i++)
     {
-      devices[i] = accessLink.Install (tcpSender.Get (i), gateway.Get (0));
-      tchPfifo.Install (devices[i]);
+      devices [i] = accessLink.Install (tcpSender.Get (i), gateway.Get (0));
+      tchPfifo.Install (devices [i]);
     }
 
   NetDeviceContainer devices_sink;
@@ -141,30 +141,30 @@ void experiment (std::string queue_disc_type)
 
   NetDeviceContainer devices_gateway;
   devices_gateway = bottleneckLink.Install (gateway.Get (0), gateway.Get (1));
-  // Install QueueDisc at gateways
+  // Install QueueDisc at gateway
   QueueDiscContainer queueDiscs = tch.Install (devices_gateway);
 
   Ipv4AddressHelper address;
   address.SetBase ("10.0.0.0", "255.255.255.0");
 
-  Ipv4InterfaceContainer interfaces[5];
+  Ipv4InterfaceContainer interfaces [5];
   Ipv4InterfaceContainer interfaces_sink;
   Ipv4InterfaceContainer interfaces_gateway;
-  Ipv4InterfaceContainer udpinterfaces[2];
+  Ipv4InterfaceContainer udpinterfaces [2];
 
-  NetDeviceContainer udpdevices[2];
+  NetDeviceContainer udpdevices [2];
 
   for (uint8_t i = 0; i < 5; i++)
     {
       address.NewNetwork ();
-      interfaces[i] = address.Assign (devices[i]);
+      interfaces [i] = address.Assign (devices [i]);
     }
 
   for (uint8_t i = 0; i < 2; i++)
     {
-      udpdevices[i] = accessLink.Install (udpSender.Get (i), gateway.Get (0));
+      udpdevices [i] = accessLink.Install (udpSender.Get (i), gateway.Get (0));
       address.NewNetwork ();
-      udpinterfaces[i] = address.Assign (udpdevices[i]);
+      udpinterfaces [i] = address.Assign (udpdevices [i]);
     }
 
   address.NewNetwork ();
@@ -244,7 +244,6 @@ void experiment (std::string queue_disc_type)
 
 int main (int argc, char **argv)
 {
-  std::string wifiManager ("Arf");
   std::cout << "Simulation with COBALT QueueDisc: Start\n" << std::flush;
   experiment ("CobaltQueueDisc");
   std::cout << "Simulation with COBALT QueueDisc: End\n" << std::flush;
