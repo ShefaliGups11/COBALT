@@ -1,3 +1,27 @@
+/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+/*
+ * Copyright (c) 2019 NITK Surathkal
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation;
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * Ported to ns-3 by: Vignesh Kannan <vignesh2496@gmail.com>
+ *                    Harsh Lara <harshapplefan@gmail.com>
+ *                    Jendaipou Palmei <jendaipoupalmei@gmail.com>
+ *                    Shefali Gupta <shefaligups11@gmail.com>
+ *                    Mohit P. Tahiliani <tahiliani@nitk.edu.in>
+ */
+
 #include "ns3/test.h"
 #include "ns3/cobalt-queue-disc.h"
 #include "ns3/packet.h"
@@ -48,7 +72,7 @@ private:
 
 CobaltQueueDiscTestItem::CobaltQueueDiscTestItem (Ptr<Packet> p, const Address & addr,uint16_t protocol, bool ecnCapable)
   : QueueDiscItem (p, addr, ecnCapable),
-    m_ecnCapablePacket (ecnCapable)
+  m_ecnCapablePacket (ecnCapable)
 {
 }
 
@@ -101,7 +125,7 @@ private:
 };
 
 CobaltQueueDiscBasicEnqueueDequeue::CobaltQueueDiscBasicEnqueueDequeue (QueueSizeUnit mode)
-  : TestCase ("Basic enqueue and dequeue operations, and attribute setting" + mode)
+  : TestCase ("Basic enqueue and dequeue operations, and attribute setting" + std::to_string (mode))
 {
   m_mode = mode;
 }
@@ -157,7 +181,7 @@ CobaltQueueDiscBasicEnqueueDequeue::DoRun (void)
   queue->Enqueue (Create<CobaltQueueDiscTestItem> (p6, dest,0, false));
   NS_TEST_EXPECT_MSG_EQ (queue->GetCurrentSize ().GetValue (), 6 * modeSize, "There should be six packets in queue");
 
-  NS_TEST_EXPECT_MSG_EQ (queue->GetDropOverLimit (), 0, "There should be no packets being dropped due to full queue");
+  NS_TEST_EXPECT_MSG_EQ (queue->GetStats ().GetNDroppedPackets (CobaltQueueDisc::OVERLIMIT_DROP), 0, "There should be no packets being dropped due to full queue");
 
   Ptr<QueueDiscItem> item;
 
@@ -194,7 +218,7 @@ CobaltQueueDiscBasicEnqueueDequeue::DoRun (void)
   item = queue->Dequeue ();
   NS_TEST_EXPECT_MSG_EQ ((item == 0), true, "There are really no packets in queue");
 
-  NS_TEST_EXPECT_MSG_EQ (queue->GetDropCount (), 0, "There should be no packet drops according to Cobalt algorithm");
+  NS_TEST_EXPECT_MSG_EQ (queue->GetStats ().GetNDroppedPackets (CobaltQueueDisc::TARGET_EXCEEDED_DROP), 0, "There should be no packet drops according to Cobalt algorithm");
 }
 
 /**
@@ -236,7 +260,6 @@ CobaltQueueDiscDropTest::RunDropTest (QueueSizeUnit mode)
 {
   uint32_t pktSize = 1500;
   uint32_t modeSize = 0;
-  CobaltQueueDisc::Stats st;
   Ptr<CobaltQueueDisc> queue = CreateObject<CobaltQueueDisc> ();
 
   if (mode == QueueSizeUnit::BYTES)
@@ -266,11 +289,11 @@ CobaltQueueDiscDropTest::RunDropTest (QueueSizeUnit mode)
   Simulator::Stop (Seconds (8.0));
   Simulator::Run ();
 
-  st = StaticCast<CobaltQueueDisc> (queue)->GetStats ();
+  QueueDisc::Stats st = queue->GetStats ();
 
 // The Pdrop value should increase, from it's default value of zero
   NS_TEST_EXPECT_MSG_NE (queue->GetPdrop (), 0, "Pdrop should be non-zero");
-  NS_TEST_EXPECT_MSG_NE (st.qLimDrop, 0, "Drops due to queue overflow should be non-zero");
+  NS_TEST_EXPECT_MSG_NE (st.GetNDroppedPackets (CobaltQueueDisc::OVERLIMIT_DROP), 0, "Drops due to queue overflow should be non-zero");
 }
 
 void

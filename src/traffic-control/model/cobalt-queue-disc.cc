@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
- * Copyright (c) 2018 NITK Surathkal
+ * Copyright (c) 2019 NITK Surathkal
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -15,14 +15,14 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * Cobalt, the CODEL - BLUE - Alternate Queueing discipline
+ * Cobalt, the CoDel - BLUE - Alternate Queueing discipline
  * Based on linux code.
  *
  * Ported to ns-3 by: Vignesh Kannan <vignesh2496@gmail.com>
  *                    Harsh Lara <harshapplefan@gmail.com>
  *                    Jendaipou Palmei <jendaipoupalmei@gmail.com>
  *                    Shefali Gupta <shefaligups11@gmail.com>
- *                    Mohit P.Tahiliani <tahiliani@nitk.edu.in>
+ *                    Mohit P. Tahiliani <tahiliani@nitk.edu.in>
  */
 
 #include "ns3/log.h"
@@ -35,12 +35,6 @@
 #include "ns3/net-device-queue-interface.h"
 #include <climits>
 
-/*
- * COBALT operates the Codel and BLUE algorithms in parallel, in order
- * to obtain the best features of each.  Codel is excellent on flows
- * which respond to congestion signals in a TCP-like way.  BLUE is far
- * more effective on unresponsive flows.
- */
 
 namespace ns3 {
 
@@ -81,7 +75,7 @@ TypeId CobaltQueueDisc::GetTypeId (void)
                    MakeBooleanAccessor (&CobaltQueueDisc::m_useEcn),
                    MakeBooleanChecker ())
     .AddAttribute ("Pdrop",
-                   "Marking Probabilty",
+                   "Marking Probability",
                    DoubleValue (0),
                    MakeDoubleAccessor (&CobaltQueueDisc::m_Pdrop),
                    MakeDoubleChecker<double> ())
@@ -103,10 +97,6 @@ TypeId CobaltQueueDisc::GetTypeId (void)
                      "Dropping state",
                      MakeTraceSourceAccessor (&CobaltQueueDisc::m_dropping),
                      "ns3::TracedValueCallback::Bool")
-    .AddTraceSource ("Sojourn",
-                     "Time in the queue",
-                     MakeTraceSourceAccessor (&CobaltQueueDisc::m_sojourn),
-                     "ns3::Time::TracedValueCallback")
     .AddTraceSource ("DropNext",
                      "Time until next packet drop",
                      MakeTraceSourceAccessor (&CobaltQueueDisc::m_dropNext),
@@ -189,20 +179,6 @@ CobaltQueueDisc::InitializeParams (void)
   m_recInvSqrt = ~0U;
   m_lastUpdateTimeBlue = 0;
   m_dropNext = 0;
-  m_sojourn = 0;
-
-  // Stats
-  m_stats.forcedDrop = 0;
-  m_stats.unforcedDrop = 0;
-  m_stats.qLimDrop = 0;
-  m_stats.forcedMark = 0;
-}
-
-CobaltQueueDisc::Stats
-CobaltQueueDisc::GetStats ()
-{
-  NS_LOG_FUNCTION (this);
-  return m_stats;
 }
 
 bool
@@ -253,18 +229,6 @@ CobaltQueueDisc::GetDropNext (void)
   return m_dropNext;
 }
 
-uint32_t
-CobaltQueueDisc::GetDropOverLimit (void)
-{
-  return m_stats.qLimDrop;
-}
-
-uint32_t
-CobaltQueueDisc::GetDropCount (void)
-{
-  return m_stats.forcedDrop;
-}
-
 void
 CobaltQueueDisc::NewtonStep (void)
 {
@@ -277,16 +241,6 @@ CobaltQueueDisc::NewtonStep (void)
   val = (val * invsqrt) >> (32 - 2 + 1);
   m_recInvSqrt = val;
 }
-
-/* There is a big difference in timing between the accurate values placed in
- * the cache and the approximations given by a single Newton step for small
- * count values, particularly when stepping from count 1 to 2 or vice versa.
- * Above 16, a single Newton step gives sufficient accuracy in either
- * direction, given the precision stored.
- *
- * The magnitude of the error when stepping up to count 2 is such as to give
- * the value that *should* have been produced at count 4.
- */
 
 void
 CobaltQueueDisc::CacheInit (void)
@@ -324,13 +278,6 @@ CobaltQueueDisc::ControlLaw (int64_t t)
   return t + ReciprocalDivide (Time2CoDel (m_interval), m_recInvSqrt);
 }
 
-Time
-CobaltQueueDisc::GetQueueDelay (void)
-{
-  NS_LOG_FUNCTION (this);
-  return m_sojourn;
-}
-
 void
 CobaltQueueDisc::DoDispose (void)
 {
@@ -340,7 +287,7 @@ CobaltQueueDisc::DoDispose (void)
 }
 
 Ptr<const QueueDiscItem>
-CobaltQueueDisc::DoPeek (void) const
+CobaltQueueDisc::DoPeek (void)
 {
   NS_LOG_FUNCTION (this);
   if (GetInternalQueue (0)->IsEmpty ())
@@ -401,7 +348,6 @@ CobaltQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
       // Call this to update Blue's drop probability
       CobaltQueueFull (now);
       DropBeforeEnqueue (item, OVERLIMIT_DROP);
-      m_stats.qLimDrop++;
       return false;
     }
 
@@ -498,13 +444,11 @@ void CobaltQueueDisc::CobaltQueueEmpty (int64_t now)
 bool CobaltQueueDisc::CobaltShouldDrop (Ptr<QueueDiscItem> item, int64_t now)
 {
   NS_LOG_FUNCTION (this);
-  bool drop = false, codelForcedDrop = false;
-
+  bool drop = false;
 
   /* Simplified Codel implementation */
   Time delta = Simulator::Now () - item->GetTimeStamp ();
   NS_LOG_INFO ("Sojourn time " << delta.GetSeconds ());
-  m_sojourn = delta;
   int64_t sojournTime = Time2CoDel (delta);
   int64_t schedule = now - m_dropNext;
   bool over_target = CoDelTimeAfter (sojournTime, Time2CoDel (m_target));
@@ -531,18 +475,7 @@ bool CobaltQueueDisc::CobaltShouldDrop (Ptr<QueueDiscItem> item, int64_t now)
     {
       /* Check for marking possibility only if BLUE decides NOT to drop. */
       /* Check if router and packet, both have ECN enabled. Only if this is true, mark the packet. */
-      if (!drop)
-        {
-          drop = !(m_useEcn && item->Mark ());
-          if (!drop)
-            {
-              m_stats.forcedMark++;
-            }
-          else
-            {
-              codelForcedDrop = true;
-            }
-        }
+      drop = !(m_useEcn && Mark (item, FORCED_MARK));
 
       m_count = max (m_count, m_count + 1);
 
@@ -576,19 +509,6 @@ bool CobaltQueueDisc::CobaltShouldDrop (Ptr<QueueDiscItem> item, int64_t now)
   else if (schedule > 0 && !drop)
     {
       m_dropNext = now;
-    }
-
-  // Updating stats
-  if (drop)
-    {
-      if (codelForcedDrop || m_Pdrop == 1.0)
-        {
-          m_stats.forcedDrop++;
-        }
-      else
-        {
-          m_stats.unforcedDrop++;
-        }
     }
 
   return drop;

@@ -19,6 +19,7 @@ def build(bld):
                                  ['internet', 'point-to-point', 'applications', 'traffic-control'])
     obj.source = 'tbf-example.cc'
 
-    obj = bld.create_ns3_program('cobalt-example',
+    obj = bld.create_ns3_program('cobalt-vs-codel',
                                  ['internet', 'point-to-point', 'applications', 'traffic-control'])
-    obj.source = 'cobalt-example.cc'
+    obj.source = 'cobalt-vs-codel.cc'
+
