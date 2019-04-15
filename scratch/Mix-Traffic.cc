@@ -198,7 +198,6 @@ int main (int argc, char *argv[])
   AddressValue remoteAddress (InetSocketAddress (interfaces_sink.GetAddress (1), port));
   AddressValue remoteAddress1 (InetSocketAddress (interfaces_sink.GetAddress (1), port1));
 
-  Config::SetDefault ("ns3::TcpSocket::SegmentSize", UintegerValue (1000));
   BulkSendHelper ftp ("ns3::TcpSocketFactory", Address ());
   ftp.SetAttribute ("Remote", remoteAddress);
   ftp.SetAttribute ("SendSize", UintegerValue (1000));

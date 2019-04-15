@@ -41,7 +41,6 @@ std::string dir = "PlotsLight/";
 void
 CheckQueueSize (Ptr<QueueDisc> queue)
 {
-  //double qDel = StaticCast<PieQueueDisc> (queue)->GetQueueDelay ().GetSeconds ();
   uint32_t qSize = queue->GetCurrentSize ().GetValue ();
   // check queue size every 1/100 of a second
   Simulator::Schedule (Seconds (0.001), &CheckQueueSize, queue);

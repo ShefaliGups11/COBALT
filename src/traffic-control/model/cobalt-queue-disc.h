@@ -44,15 +44,9 @@ class CobaltQueueDiscControlLawTest;  // Forward declaration for unit test
 
 namespace ns3 {
 
-/**
- * Number of bits discarded from the time representation.
- * The time is assumed to be in nanoseconds.
- */
-static const int  COBALT_SHIFT = 10;
 
+#define REC_INV_SQRT_CACHE (16)
 #define DEFAULT_COBALT_LIMIT 1000
-#define REC_INV_SQRT_BITS (8 * sizeof(uint16_t))
-#define REC_INV_SQRT_SHIFT (32 - REC_INV_SQRT_BITS)
 
 class TraceContainer;
 
@@ -168,7 +162,7 @@ public:
    *
    * \returns The time for next packet drop
    */
-  uint32_t GetDropNext (void);
+  int64_t GetDropNext (void);
 
   static constexpr const char* TARGET_EXCEEDED_DROP = "Target exceeded drop";  //!< Sojourn time above target
   static constexpr const char* OVERLIMIT_DROP = "Overlimit drop";  //!< Overlimit dropped packet
@@ -200,7 +194,7 @@ public:
    * @param t the input Time Object
    * @return the unsigned 32-bit integer representation
    */
-  uint32_t Time2CoDel (Time t);
+  int64_t Time2CoDel (Time t);
 
 protected:
   /**
@@ -238,8 +232,11 @@ private:
    * \param t Current next drop time
    * \returns The new next drop time:
    */
-  uint32_t ControlLaw (uint32_t t);
+  int64_t ControlLaw (int64_t t);
 
+  void InvSqrt (void);
+
+  void CacheInit (void);
   /**
    * Check if CoDel time a is successive to b
    * @param a left operand
@@ -247,7 +244,7 @@ private:
    * @return true if a is greater than b
    */
 
-  bool CoDelTimeAfter (uint32_t a, uint32_t b);
+  bool CoDelTimeAfter (int64_t a, int64_t b);
 
   /**
    * Check if CoDel time a is successive or equal to b
@@ -255,7 +252,7 @@ private:
    * @param b right operand
    * @return true if a is greater than or equal to b
    */
-  bool CoDelTimeAfterEq (uint32_t a, uint32_t b);
+  bool CoDelTimeAfterEq (int64_t a, int64_t b);
 
   /**
    * Check if CoDel time a is preceding b
@@ -263,7 +260,7 @@ private:
    * @param b right operand
    * @return true if a is less than to b
    */
-  bool CoDelTimeBefore (uint32_t a, uint32_t b);
+  bool CoDelTimeBefore (int64_t a, int64_t b);
 
   /**
    * Check if CoDel time a is preceding or equal to b
@@ -271,23 +268,23 @@ private:
    * @param b right operand
    * @return true if a is less than or equal to b
    */
-  bool CoDelTimeBeforeEq (uint32_t a, uint32_t b);
+  bool CoDelTimeBeforeEq (int64_t a, int64_t b);
 
   /**
    * Called when the queue becomes full to alter the drop probabilities of Blue
    */
-  void CobaltQueueFull (uint32_t now);
+  void CobaltQueueFull (int64_t now);
 
   /**
    * Called when the queue becomes empty to alter the drop probabilities of Blue
    */
-  void CobaltQueueEmpty (uint32_t now);
+  void CobaltQueueEmpty (int64_t now);
 
   /**
    * Called to decide whether the current packet should be dropped based on decisions taken by Blue and Codel working parallely
    * Returns true if the packet should be dropped, false otherwise
    */
-  bool CobaltShouldDrop (Ptr<QueueDiscItem> item, uint32_t now);
+  bool CobaltShouldDrop (Ptr<QueueDiscItem> item, int64_t now);
 
   // Common to Codel and Blue
   // Maintained by Cobalt
@@ -298,12 +295,11 @@ private:
   // Codel parameters
   // Maintained by Cobalt
   TracedValue<uint32_t> m_count;          //!< Number of packets dropped since entering drop state
-  TracedValue<uint32_t> m_dropNext;       //!< Time to drop next packet
+  TracedValue<int64_t> m_dropNext;       //!< Time to drop next packet
   TracedValue<Time> m_sojourn;            //!< Time in queue
   TracedValue<bool> m_dropping;           //!< True if in dropping state
-  uint16_t m_recInvSqrt;                  //!< Reciprocal inverse square root
-  uint32_t m_firstAboveTime;              //!< Time to declare sojourn time above target
-  
+  uint32_t m_recInvSqrt;                  //!< Reciprocal inverse square root
+
   // Supplied by user
   Time m_interval;                        //!< 100 ms sliding minimum time window width
   Time m_target;                          //!< 5 ms target queue delay
@@ -313,11 +309,12 @@ private:
   // Maintained by Cobalt
   Ptr<UniformRandomVariable> m_uv;        //!< Rng stream
   uint32_t m_lastUpdateTimeBlue;          //!< Blue's last update time for drop probability
-  
+
   // Supplied by user
   double m_increment;                     //!< increment value for marking probability
   double m_decrement;                     //!< decrement value for marking probability
   double m_Pdrop;                         //!< Drop Probability
+  uint32_t m_recInvSqrtCache[REC_INV_SQRT_CACHE] = {0};
 
 };
 

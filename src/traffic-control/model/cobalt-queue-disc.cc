@@ -44,94 +44,9 @@
 
 namespace ns3 {
 
-
 NS_LOG_COMPONENT_DEFINE ("CobaltQueueDisc");
 
 NS_OBJECT_ENSURE_REGISTERED (CobaltQueueDisc);
-
-/**
- * CoDel time stamp, used to carry CoDel time informations.
- */
-class CobaltTimestampTag : public Tag
-{
-public:
-  CobaltTimestampTag ();
-  /**
-   * \brief Get the type ID.
-   * \return the object TypeId
-   */
-  static TypeId GetTypeId (void);
-  virtual TypeId GetInstanceTypeId (void) const;
-
-  virtual uint32_t GetSerializedSize (void) const;
-  virtual void Serialize (TagBuffer i) const;
-  virtual void Deserialize (TagBuffer i);
-  virtual void Print (std::ostream &os) const;
-
-  /**
-   * Gets the Tag creation time
-   * @return the time object stored in the tag
-   */
-  Time GetTxTime (void) const;
-private:
-  uint64_t m_creationTime; //!< Tag creation time
-};
-
-CobaltTimestampTag::CobaltTimestampTag ()
-  : m_creationTime (Simulator::Now ().GetTimeStep ())
-{
-}
-
-TypeId
-CobaltTimestampTag::GetTypeId (void)
-{
-  static TypeId tid = TypeId ("ns3::CobaltTimestampTag")
-    .SetParent<Tag> ()
-    .AddConstructor<CobaltTimestampTag> ()
-    .AddAttribute ("CreationTime",
-                   "The time at which the timestamp was created",
-                   StringValue ("0.0s"),
-                   MakeTimeAccessor (&CobaltTimestampTag::GetTxTime),
-                   MakeTimeChecker ())
-  ;
-  return tid;
-}
-
-TypeId
-CobaltTimestampTag::GetInstanceTypeId (void) const
-{
-  return GetTypeId ();
-}
-
-uint32_t
-CobaltTimestampTag::GetSerializedSize (void) const
-{
-  return 8;
-}
-
-void
-CobaltTimestampTag::Serialize (TagBuffer i) const
-{
-  i.WriteU64 (m_creationTime);
-}
-
-void
-CobaltTimestampTag::Deserialize (TagBuffer i)
-{
-  m_creationTime = i.ReadU64 ();
-}
-
-void
-CobaltTimestampTag::Print (std::ostream &os) const
-{
-  os << "CreationTime=" << m_creationTime;
-}
-
-Time
-CobaltTimestampTag::GetTxTime (void) const
-{
-  return TimeStep (m_creationTime);
-}
 
 TypeId CobaltQueueDisc::GetTypeId (void)
 {
@@ -172,12 +87,12 @@ TypeId CobaltQueueDisc::GetTypeId (void)
                    MakeDoubleChecker<double> ())
     .AddAttribute ("Increment",
                    "Pdrop increment value",
-                   DoubleValue (1./256),
+                   DoubleValue (1. / 256),
                    MakeDoubleAccessor (&CobaltQueueDisc::m_increment),
                    MakeDoubleChecker<double> ())
     .AddAttribute ("Decrement",
                    "Pdrop decrement Value",
-                   DoubleValue (1./4096),
+                   DoubleValue (1. / 4096),
                    MakeDoubleAccessor (&CobaltQueueDisc::m_decrement),
                    MakeDoubleChecker<double> ())
     .AddTraceSource ("Count",
@@ -228,12 +143,12 @@ double max (double x, double y)
  * Returns the current time translated in CoDel time representation
  * \return the current time
  */
-static uint32_t CoDelGetTime (void)
+static int64_t CoDelGetTime (void)
 {
   Time time = Simulator::Now ();
-  uint64_t ns = time.GetNanoSeconds ();
+  int64_t ns = time.GetNanoSeconds ();
 
-  return ns >> COBALT_SHIFT;
+  return ns;
 }
 
 CobaltQueueDisc::CobaltQueueDisc ()
@@ -267,11 +182,12 @@ CobaltQueueDisc::InitializeParams (void)
 {
   // Cobalt parameters
   NS_LOG_FUNCTION (this);
+  m_recInvSqrtCache[0] = ~0;
+  CacheInit ();
   m_count = 0;
   m_dropping = false;
-  m_recInvSqrt = ~0U >> REC_INV_SQRT_SHIFT;
+  m_recInvSqrt = ~0U;
   m_lastUpdateTimeBlue = 0;
-  m_firstAboveTime = 0;
   m_dropNext = 0;
   m_sojourn = 0;
 
@@ -290,33 +206,33 @@ CobaltQueueDisc::GetStats ()
 }
 
 bool
-CobaltQueueDisc::CoDelTimeAfter (uint32_t a, uint32_t b)
+CobaltQueueDisc::CoDelTimeAfter (int64_t a, int64_t b)
 {
-  return  ((int)(a) - (int)(b) > 0);
+  return  ((int64_t)(a) - (int64_t)(b) > 0);
 }
 
 bool
-CobaltQueueDisc::CoDelTimeAfterEq (uint32_t a, uint32_t b)
+CobaltQueueDisc::CoDelTimeAfterEq (int64_t a, int64_t b)
 {
-  return ((int)(a) - (int)(b) >= 0);
+  return ((int64_t)(a) - (int64_t)(b) >= 0);
 }
 
 bool
-CobaltQueueDisc::CoDelTimeBefore (uint32_t a, uint32_t b)
+CobaltQueueDisc::CoDelTimeBefore (int64_t a, int64_t b)
 {
   return  ((int)(a) - (int)(b) < 0);
 }
 
 bool
-CobaltQueueDisc::CoDelTimeBeforeEq (uint32_t a, uint32_t b)
+CobaltQueueDisc::CoDelTimeBeforeEq (int64_t a, int64_t b)
 {
-  return ((int)(a) - (int)(b) <= 0);
+  return ((int64_t)(a) - (int64_t)(b) <= 0);
 }
 
-uint32_t
+int64_t
 CobaltQueueDisc::Time2CoDel (Time t)
 {
-  return (t.GetNanoSeconds () >> COBALT_SHIFT);
+  return (t.GetNanoSeconds ());
 }
 
 Time
@@ -331,7 +247,7 @@ CobaltQueueDisc::GetInterval (void)
   return m_interval;
 }
 
-uint32_t
+int64_t
 CobaltQueueDisc::GetDropNext (void)
 {
   return m_dropNext;
@@ -353,20 +269,59 @@ void
 CobaltQueueDisc::NewtonStep (void)
 {
   NS_LOG_FUNCTION (this);
-  uint32_t invsqrt = ((uint32_t) m_recInvSqrt) << REC_INV_SQRT_SHIFT;
+  uint32_t invsqrt = ((uint32_t) m_recInvSqrt);
   uint32_t invsqrt2 = ((uint64_t) invsqrt * invsqrt) >> 32;
   uint64_t val = (3ll << 32) - ((uint64_t) m_count * invsqrt2);
 
   val >>= 2; /* avoid overflow */
   val = (val * invsqrt) >> (32 - 2 + 1);
-  m_recInvSqrt = val >> REC_INV_SQRT_SHIFT;
+  m_recInvSqrt = val;
 }
 
-uint32_t
-CobaltQueueDisc::ControlLaw (uint32_t t)
+/* There is a big difference in timing between the accurate values placed in
+ * the cache and the approximations given by a single Newton step for small
+ * count values, particularly when stepping from count 1 to 2 or vice versa.
+ * Above 16, a single Newton step gives sufficient accuracy in either
+ * direction, given the precision stored.
+ *
+ * The magnitude of the error when stepping up to count 2 is such as to give
+ * the value that *should* have been produced at count 4.
+ */
+
+void
+CobaltQueueDisc::CacheInit (void)
+{
+  m_recInvSqrt = ~0U;
+  m_recInvSqrtCache[0] = m_recInvSqrt;
+
+  for (m_count = 1; m_count < (uint32_t)(REC_INV_SQRT_CACHE); m_count++)
+    {
+      NewtonStep ();
+      NewtonStep ();
+      NewtonStep ();
+      NewtonStep ();
+      m_recInvSqrtCache[m_count] = m_recInvSqrt;
+    }
+}
+
+void
+CobaltQueueDisc::InvSqrt (void)
+{
+  if (m_count < (uint32_t)REC_INV_SQRT_CACHE)
+    {
+      m_recInvSqrt = m_recInvSqrtCache[m_count];
+    }
+  else
+    {
+      NewtonStep ();
+    }
+}
+
+int64_t
+CobaltQueueDisc::ControlLaw (int64_t t)
 {
   NS_LOG_FUNCTION (this);
-  return t + ReciprocalDivide (Time2CoDel (m_interval), m_recInvSqrt << REC_INV_SQRT_SHIFT);
+  return t + ReciprocalDivide (Time2CoDel (m_interval), m_recInvSqrt);
 }
 
 Time
@@ -442,17 +397,13 @@ CobaltQueueDisc::DoEnqueue (Ptr<QueueDiscItem> item)
   if (GetCurrentSize () + item > GetMaxSize ())
     {
       NS_LOG_LOGIC ("Queue full -- dropping pkt");
-      uint32_t now = CoDelGetTime ();
+      int64_t now = CoDelGetTime ();
       // Call this to update Blue's drop probability
       CobaltQueueFull (now);
       DropBeforeEnqueue (item, OVERLIMIT_DROP);
       m_stats.qLimDrop++;
       return false;
     }
-
-  // Tag packet with current time for DoDequeue() to compute sojourn time
-  CobaltTimestampTag tag;
-  p->AddPacketTag (tag);
 
   bool retval = GetInternalQueue (0)->Enqueue (item);
 
@@ -478,13 +429,13 @@ CobaltQueueDisc::DoDequeue (void)
           // Leave dropping state when queue is empty (derived from Codel)
           m_dropping = false;
           NS_LOG_LOGIC ("Queue empty");
-          uint32_t now = CoDelGetTime ();
+          int64_t now = CoDelGetTime ();
           // Call this to update Blue's drop probability
           CobaltQueueEmpty (now);
           return 0;
         }
 
-      uint32_t now = CoDelGetTime ();
+      int64_t now = CoDelGetTime ();
 
       NS_LOG_LOGIC ("Popped " << item);
       NS_LOG_LOGIC ("Number packets remaining " << GetInternalQueue (0)->GetNPackets ());
@@ -506,7 +457,7 @@ CobaltQueueDisc::DoDequeue (void)
 }
 
 // Call this when a packet had to be dropped due to queue overflow.
-void CobaltQueueDisc::CobaltQueueFull (uint32_t now)
+void CobaltQueueDisc::CobaltQueueFull (int64_t now)
 {
   NS_LOG_FUNCTION (this);
   NS_LOG_LOGIC ("Outside IF block");
@@ -525,7 +476,7 @@ void CobaltQueueDisc::CobaltQueueFull (uint32_t now)
 }
 
 // Call this when the queue was serviced but turned out to be empty.
-void CobaltQueueDisc::CobaltQueueEmpty (uint32_t now)
+void CobaltQueueDisc::CobaltQueueEmpty (int64_t now)
 {
   NS_LOG_FUNCTION (this);
   if (m_Pdrop && CoDelTimeAfter ((now - m_lastUpdateTimeBlue), Time2CoDel (m_target)))
@@ -538,28 +489,24 @@ void CobaltQueueDisc::CobaltQueueEmpty (uint32_t now)
   if (m_count && CoDelTimeAfterEq ((now - m_dropNext), 0))
     {
       m_count--;
-      NewtonStep ();
+      InvSqrt ();
       m_dropNext = ControlLaw (m_dropNext);
     }
 }
 
 // Determines if Cobalt should drop the packet
-bool CobaltQueueDisc::CobaltShouldDrop (Ptr<QueueDiscItem> item, uint32_t now)
+bool CobaltQueueDisc::CobaltShouldDrop (Ptr<QueueDiscItem> item, int64_t now)
 {
   NS_LOG_FUNCTION (this);
   bool drop = false, codelForcedDrop = false;
-  
+
 
   /* Simplified Codel implementation */
-  CobaltTimestampTag tag;
-  bool found = item->GetPacket ()->RemovePacketTag (tag);
-  NS_ASSERT_MSG (found, "found a packet without an input timestamp tag");
-  NS_UNUSED (found);          //silence compiler warning
-  Time delta = Simulator::Now () - tag.GetTxTime ();
+  Time delta = Simulator::Now () - item->GetTimeStamp ();
   NS_LOG_INFO ("Sojourn time " << delta.GetSeconds ());
   m_sojourn = delta;
-  uint32_t sojournTime = Time2CoDel (delta);
-  uint32_t schedule = now - m_dropNext;
+  int64_t sojournTime = Time2CoDel (delta);
+  int64_t schedule = now - m_dropNext;
   bool over_target = CoDelTimeAfter (sojournTime, Time2CoDel (m_target));
   bool next_due = m_count && schedule >= 0;
 
@@ -599,7 +546,7 @@ bool CobaltQueueDisc::CobaltShouldDrop (Ptr<QueueDiscItem> item, uint32_t now)
 
       m_count = max (m_count, m_count + 1);
 
-      NewtonStep ();
+      InvSqrt ();
       m_dropNext = ControlLaw (m_dropNext);
       schedule = now - m_dropNext;
     }
@@ -608,13 +555,13 @@ bool CobaltQueueDisc::CobaltShouldDrop (Ptr<QueueDiscItem> item, uint32_t now)
       while (next_due)
         {
           m_count--;
-          NewtonStep ();
+          InvSqrt ();
           m_dropNext = ControlLaw (m_dropNext);
           schedule = now - m_dropNext;
           next_due = m_count && schedule >= 0;
         }
     }
-    /* Simple BLUE implementation. Lack of ECN is deliberate. */
+  /* Simple BLUE implementation. Lack of ECN is deliberate. */
   if (m_Pdrop)
     {
       double u = m_uv->GetValue ();
